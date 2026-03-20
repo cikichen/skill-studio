@@ -2,7 +2,10 @@ mod commands;
 mod core;
 mod state;
 
-use commands::system::{get_app_overview, ping};
+use commands::{
+  manifest::{read_skill_manifest_file, validate_skill_manifest},
+  system::{get_app_overview, ping},
+};
 use state::AppState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -19,7 +22,12 @@ pub fn run() {
       }
       Ok(())
     })
-    .invoke_handler(tauri::generate_handler![ping, get_app_overview])
+    .invoke_handler(tauri::generate_handler![
+      ping,
+      get_app_overview,
+      validate_skill_manifest,
+      read_skill_manifest_file
+    ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
 }
