@@ -3,11 +3,59 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>skill-studio</title>
+    <style>
+      body { margin: 0; overflow: hidden; }
+      #initial-loader {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        font-family: system-ui, -apple-system, sans-serif;
+        background-color: var(--bg-color);
+        transition: background-color 0.3s ease;
+      }
+      .loader-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(56,189,248,0.15));
+        border: 1px solid rgba(99,102,241,0.25);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      }
+      .loader-icon svg {
+        width: 24px;
+        height: 24px;
+        color: #6366f1; /* indigo-500 */
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.8; transform: scale(0.96); }
+      }
+    </style>
+    <script>
+      (function() {
+        var isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var bgColor = isDark ? '#020617' : '#f8fafc';
+        document.documentElement.style.setProperty('--bg-color', bgColor);
+        document.documentElement.style.backgroundColor = bgColor;
+      })();
+    </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="initial-loader">
+        <div class="loader-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

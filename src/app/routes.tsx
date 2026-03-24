@@ -49,8 +49,8 @@ export function AppRouter() {
                 [
                   "group block rounded-2xl border px-4 py-3 transition",
                   isActive
-                    ? "border-sky-400/60 bg-sky-500/10 text-white shadow-[0_0_0_1px_rgba(56,189,248,0.18)]"
-                    : "border-white/8 bg-white/5 text-slate-300 hover:border-white/15 hover:bg-white/8 hover:text-white",
+                    ? "border-indigo-100 dark:border-white/10 bg-indigo-50/80 dark:bg-white/10 text-indigo-900 dark:text-white shadow-sm dark:shadow-[0_0_12px_rgba(255,255,255,0.05)]"
+                    : "border-transparent bg-transparent text-slate-500 dark:text-slate-400 hover:border-white/60 dark:hover:border-white/10 hover:bg-white/50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white hover:translate-x-1",
                 ].join(" ")
               }
             >
@@ -58,7 +58,7 @@ export function AppRouter() {
                 <item.icon className="mt-0.5 h-5 w-5 shrink-0" />
                 <div>
                   <div className="font-medium">{item.label}</div>
-                  <div className="mt-1 text-xs leading-5 text-slate-400 group-hover:text-slate-300">
+                  <div className="mt-1 text-xs leading-5 text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors">
                     {item.description}
                   </div>
                 </div>
