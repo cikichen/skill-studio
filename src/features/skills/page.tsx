@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { CheckCircle2, Inbox, Compass, Target, Layers } from "lucide-react";
+import { CheckCircle2, Inbox, Compass } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
   useDiscoverableSkills,
@@ -20,12 +20,39 @@ import type {
   UnmanagedSkill,
 } from "../../shared/types/skills";
 import {
+  Badge,
+  EmptyPanel,
+  PageIntro,
+  StatCard,
+  inputClassName as sharedInputClassName,
+  primaryButtonClassName as sharedPrimaryButtonClassName,
+  secondaryButtonClassName,
+} from "../../shared/components/workbench-ui";
+import {
   getAppLabels,
   getLocaleForLanguage,
   useI18n,
 } from "../../shared/lib/i18n";
 
 const APP_IDS: AppId[] = ["claude", "codex", "gemini", "opencode", "openclaw"];
+
+const surfacePanelClassName =
+  "rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800/95 lg:p-6";
+
+const sectionCardClassName =
+  "rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-colors hover:border-gray-300 dark:border-slate-700 dark:bg-slate-900/70 dark:hover:border-slate-600";
+
+const itemCardClassName =
+  "rounded-xl border border-gray-200 bg-white p-4 transition-colors hover:border-gray-300 dark:border-slate-700 dark:bg-slate-900/40 dark:hover:border-slate-600";
+
+const neutralButtonClassName = secondaryButtonClassName;
+
+const primaryButtonClassName = sharedPrimaryButtonClassName;
+
+const appToggleBaseClassName =
+  "rounded-md border px-2.5 py-0.5 text-[11px] transition disabled:cursor-not-allowed disabled:opacity-60";
+
+const inputClassName = sharedInputClassName;
 
 type SuccessFeedback = {
   title: string;
@@ -541,7 +568,7 @@ export function SkillsPage() {
   if (isAnyLoading) {
     return (
       <section className="animate-pulse space-y-5">
-        <div className="h-[220px] rounded-[28px] bg-slate-200/40 dark:bg-[#0f172a]/50" />
+        <div className="h-[220px] rounded-2xl bg-slate-200/40 dark:bg-[#0f172a]/50" />
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
           <div className="h-[140px] rounded-xl bg-slate-200/40 dark:bg-[#0f172a]/50" />
           <div className="grid gap-3 sm:grid-cols-2 lg:w-[260px] lg:grid-cols-1">
@@ -558,79 +585,73 @@ export function SkillsPage() {
   }
 
   return (
-    <section className="grid gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(360px,420px)] 2xl:grid-cols-[minmax(0,1.6fr)_400px]">
-      <div className="space-y-5">
-        <div className="rounded-[28px] border border-gray-100 dark:border-slate-800 bg-white dark:bg-[#0f172a] shadow-sm backdrop-blur-xl p-5 lg:p-6">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.24em] text-indigo-600/80 dark:text-indigo-400/70 font-semibold">
-                <span>{t("已安装", "Installed")}</span>
-                <span className="rounded-full border border-gray-100 dark:border-slate-800 bg-slate-100 dark:bg-white/5 px-2.5 py-1 text-[10px] tracking-[0.18em] text-slate-700 dark:text-slate-300">
-                  {t("与 cc-switch 能力对齐", "cc-switch parity")}
-                </span>
-              </div>
-              <h3 className="mt-3 text-xl font-semibold tracking-tight text-slate-900 dark:text-white md:text-2xl">
-                {t("统一技能清单", "Unified skill inventory")}
-              </h3>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400 dark:text-slate-500 dark:text-slate-400">
-                {t(
-                  "集中查看已安装技能、来源、启用应用与安装时间；下方保留跨区搜索、批量导入和本地 ZIP 安装入口。",
-                  "Review installed skills, source, enabled apps, and install time in one place while keeping cross-section search, batch import, and ZIP install flows close by."
-                )}
-              </p>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-3 xl:w-[360px] xl:grid-cols-1">
-              <CompactMetricCard
-                icon={CheckCircle2}
-                iconColor="text-blue-500 dark:text-blue-400"
-                iconBg="bg-blue-50 dark:bg-blue-900/20"
-                label={t("已安装", "Installed")}
-                value={formatCount(
-                  filteredInstalledSkills.length,
-                  installedSkills.length
-                )}
-                helper={t("受管技能", "Managed skills")}
-              />
-              <CompactMetricCard
-                icon={Inbox}
-                iconColor="text-orange-500 dark:text-orange-400"
-                iconBg="bg-orange-50 dark:bg-orange-900/20"
-                label={t("未托管", "Unmanaged")}
-                value={formatCount(
-                  filteredUnmanagedSkills.length,
-                  unmanagedSkills.length
-                )}
-                helper={t("可导入候选", "Import candidates")}
-              />
-              <CompactMetricCard
-                icon={Compass}
-                iconColor="text-purple-500 dark:text-purple-400"
-                iconBg="bg-purple-50 dark:bg-purple-900/20"
-                label={t("发现", "Discovery")}
-                value={formatCount(
-                  filteredDiscoverableSkills.length,
-                  discoverableSkills.length
-                )}
-                helper={t("仓库候选", "Repo candidates")}
-              />
-            </div>
-          </div>
+    <section className="space-y-8">
+      <PageIntro
+        eyebrow={t("已安装", "Installed")}
+        title={t("统一技能清单", "Unified skill inventory")}
+        description={t(
+          "集中查看已安装技能、来源、启用应用与安装时间；下方保留跨区搜索、批量导入和本地 ZIP 安装入口。",
+          "Review installed skills, source, enabled apps, and install time in one place while keeping cross-section search, batch import, and ZIP install flows close by."
+        )}
+        aside={
+          <>
+            <StatCard
+              icon={CheckCircle2}
+              label={t("已安装", "Installed")}
+              value={formatCount(filteredInstalledSkills.length, installedSkills.length)}
+              helper={t("受管技能", "Managed skills")}
+              tone="blue"
+            />
+            <StatCard
+              icon={Inbox}
+              label={t("未托管", "Unmanaged")}
+              value={formatCount(filteredUnmanagedSkills.length, unmanagedSkills.length)}
+              helper={t("可导入候选", "Import candidates")}
+              tone="amber"
+            />
+            <StatCard
+              icon={Compass}
+              label={t("发现", "Discovery")}
+              value={formatCount(filteredDiscoverableSkills.length, discoverableSkills.length)}
+              helper={t("仓库候选", "Repo candidates")}
+              tone="violet"
+            />
+          </>
+        }
+        actions={
+          <>
+            <Badge tone="blue">{t("与 cc-switch 能力对齐", "cc-switch parity")}</Badge>
+            <Badge tone="slate">
+              {t("当前安装目标", "Install target")}: {appLabels[currentApp]}
+            </Badge>
+            <Badge tone="slate">
+              {selectedUnmanagedSkills.length > 0
+                ? `${t("批量导入", "Batch import")}: ${selectedUnmanagedSkills.length}`
+                : t("批量导入未选择", "Batch import: none")}
+            </Badge>
+          </>
+        }
+      />
+
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(360px,420px)] 2xl:grid-cols-[minmax(0,1.6fr)_400px]">
+        <div className="space-y-6">
+          <div className="space-y-5">
 
           {errorMessage ? (
-            <div className="mt-5 rounded-xl border border-rose-400/20 bg-rose-400/10 px-4 py-4 text-sm text-rose-100">
+            <div className="mt-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/12 dark:text-rose-100">
               {errorMessage}
             </div>
           ) : null}
 
           {successFeedback ? (
-            <div className="mt-5 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-4 text-sm text-indigo-900 dark:text-indigo-100">
+            <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-100">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="font-medium text-emerald-50">
+                  <div className="font-medium text-emerald-800 dark:text-emerald-50">
                     {successFeedback.title}
                   </div>
                   {successFeedback.details.length > 0 ? (
-                    <ul className="mt-3 space-y-1 text-indigo-900 dark:text-indigo-100/90">
+                    <ul className="mt-3 space-y-1 text-emerald-700 dark:text-emerald-100/90">
                       {successFeedback.details.map((detail) => (
                         <li key={detail}>• {detail}</li>
                       ))}
@@ -640,7 +661,7 @@ export function SkillsPage() {
                 <button
                   type="button"
                   onClick={() => setSuccessFeedback(null)}
-                  className="rounded-full border border-emerald-200/20 px-3 py-1 text-xs text-emerald-50 transition hover:bg-emerald-300/10"
+                  className="rounded-md border border-emerald-200 bg-white px-3 py-1 text-xs text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-500/20 dark:bg-transparent dark:text-emerald-100 dark:hover:bg-emerald-500/10"
                 >
                   {t("关闭", "Dismiss")}
                 </button>
@@ -648,17 +669,17 @@ export function SkillsPage() {
             </div>
           ) : null}
 
-          <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
-            <div className="rounded-xl border border-gray-100 dark:border-slate-800 bg-white dark:bg-[#0f172a] shadow-sm hover:border-gray-200 dark:border-slate-700 transition-all duration-300 p-4">
+          <div className="mt-5">
+            <div className={sectionCardClassName}>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <div className="text-sm font-medium text-slate-900 dark:text-white">
                     {t("快速筛选技能", "Quick find skills")}
                   </div>
-                  <p className="mt-1 text-xs leading-5 text-slate-400 dark:text-slate-500 dark:text-slate-400">
+                  <p className="mt-1 text-[11px] font-medium text-slate-500/80 dark:text-slate-400/80">
                     {t(
-                      "按名称、目录、仓库、来源、路径或启用应用，同时过滤已安装、未托管和可发现技能。",
-                      "Filter installed, unmanaged, and discoverable skills by name, directory, repo, source, path, or enabled app."
+                      "支持按名称、路径或来源应用筛选。",
+                      "Filter by name, path, or source app."
                     )}
                   </p>
                 </div>
@@ -666,7 +687,7 @@ export function SkillsPage() {
                   <button
                     type="button"
                     onClick={() => setSearchQuery("")}
-                    className="rounded-full border border-gray-100 dark:border-slate-800 bg-slate-100 dark:bg-white/5 px-3 py-1 text-xs text-slate-800 dark:text-slate-200 transition hover:bg-slate-200 dark:bg-white/[0.06] active:scale-95 transition-all duration-300"
+                    className={secondaryButtonClassName}
                   >
                     {t("清空搜索", "Clear search")}
                   </button>
@@ -679,9 +700,9 @@ export function SkillsPage() {
                   "搜索技能、仓库、路径或应用",
                   "Search skills, repos, paths, or apps"
                 )}
-                className="mt-4 w-full rounded-xl border border-gray-100 dark:border-slate-800 bg-slate-100 dark:bg-[#0f172a] shadow-sm dark:shadow-inner px-4 py-3 text-sm text-slate-900 dark:text-white outline-none transition placeholder:text-slate-400 dark:text-slate-500 focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/20"
+                className={`mt-4 ${inputClassName}`}
               />
-              <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
+              <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
                 {isZh
                   ? `当前显示已安装 ${formatCount(
                       filteredInstalledSkills.length,
@@ -705,40 +726,11 @@ export function SkillsPage() {
                     )} discoverable skills.`}
               </p>
             </div>
-
-            <div className="grid gap-3 sm:grid-cols-2 lg:w-[260px] lg:grid-cols-1">
-              <QuickInfoCard
-                icon={Target}
-                iconColor="text-emerald-500 dark:text-emerald-400"
-                iconBg="bg-emerald-50 dark:bg-emerald-900/20"
-                title={t("默认安装目标", "Default install target")}
-                value={appLabels[currentApp]}
-                description={t(
-                  "新的仓库安装与 ZIP 安装会立即启用到当前应用。",
-                  "New repository and ZIP installs enable the current app immediately."
-                )}
-              />
-              <QuickInfoCard
-                icon={Layers}
-                iconColor="text-indigo-500 dark:text-indigo-400"
-                iconBg="bg-indigo-50 dark:bg-indigo-900/20"
-                title={t("批量导入", "Batch import")}
-                value={
-                  selectedUnmanagedSkills.length > 0
-                    ? String(selectedUnmanagedSkills.length)
-                    : t("未选择", "None")
-                }
-                description={t(
-                  "批量导入会保留每一行的应用开关状态。",
-                  "Batch import preserves each row's per-app toggles."
-                )}
-              />
-            </div>
           </div>
 
-          <div className="mt-6 space-y-4">
+          <div className="mt-2 space-y-4">
             {isLoading ? (
-              <EmptyState
+              <EmptyPanel
                 title={t("正在加载已安装技能", "Loading installed skills")}
                 description={t(
                   "正在从 Rust 命令获取迁移后的技能清单。",
@@ -746,7 +738,7 @@ export function SkillsPage() {
                 )}
               />
             ) : installedSkills.length === 0 ? (
-              <EmptyState
+              <EmptyPanel
                 title={t("还没有已安装技能", "No installed skills yet")}
                 description={t(
                   "可通过发现列表、未托管导入或 ZIP 安装，把技能加入本地 Skill Studio 存储。",
@@ -754,7 +746,7 @@ export function SkillsPage() {
                 )}
               />
             ) : filteredInstalledSkills.length === 0 ? (
-              <EmptyState
+              <EmptyPanel
                 title={t(
                   "没有匹配搜索的已安装技能",
                   "No installed skills match your search"
@@ -775,7 +767,7 @@ export function SkillsPage() {
                 return (
                   <article
                     key={skill.id}
-                    className="rounded-xl border border-gray-100 dark:border-slate-800 bg-white dark:bg-[#0f172a] shadow-sm hover:border-gray-200 dark:border-slate-700 transition-all duration-300 p-5"
+                    className={itemCardClassName}
                   >
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                       <div className="min-w-0 flex-1">
@@ -783,14 +775,12 @@ export function SkillsPage() {
                           <h4 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
                             {skill.name}
                           </h4>
-                          <span className="rounded-full border border-gray-100 dark:border-slate-800 bg-slate-100 dark:bg-white/5 px-3 py-1 text-xs text-slate-700 dark:text-slate-300">
-                            {skill.directory}
-                          </span>
+                          <Badge tone="slate">{skill.directory}</Badge>
                         </div>
-                        <p className="mt-2 text-sm text-slate-400 dark:text-slate-500 dark:text-slate-400">
+                        <p className="mt-1.5 text-sm text-slate-600 dark:text-slate-400">
                           {t("来源", "Source")}: {source}
                         </p>
-                        <p className="mt-2 text-sm leading-6 text-slate-400 dark:text-slate-500 dark:text-slate-400">
+                        <p className="mt-1.5 text-sm leading-snug text-slate-600 dark:text-slate-400">
                           {skill.description ??
                             t(
                               "暂未提供描述。",
@@ -809,10 +799,10 @@ export function SkillsPage() {
                                 }
                                 disabled={toggleSkillAppMutation.isPending}
                                 className={[
-                                  "rounded-full border px-3 py-1 text-xs transition",
+                                  appToggleBaseClassName,
                                   enabled
-                                    ? "border-indigo-100 dark:border-indigo-500/20 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-900 dark:text-indigo-100"
-                                    : "border-gray-100 dark:border-slate-800 bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:bg-white/[0.06] active:scale-95 transition-all duration-300",
+                                    ? "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/12 dark:text-blue-100"
+                                    : "border-gray-200 bg-white text-slate-700 hover:border-gray-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800",
                                 ].join(" ")}
                               >
                                 {appLabels[app]}
@@ -844,7 +834,7 @@ export function SkillsPage() {
                               href={skill.readmeUrl}
                               target="_blank"
                               rel="noreferrer"
-                              className="rounded-full border border-gray-100 dark:border-slate-800 bg-slate-100 dark:bg-white/5 px-4 py-2 text-sm text-slate-800 dark:text-slate-200 transition hover:bg-slate-200 dark:bg-white/[0.06] active:scale-95 transition-all duration-300"
+                              className="px-2.5 py-1.5 text-xs font-medium text-slate-500 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
                             >
                               {t("文档", "Docs")}
                             </a>
@@ -853,7 +843,7 @@ export function SkillsPage() {
                             type="button"
                             onClick={() => handleUninstall(skill)}
                             disabled={uninstallSkillMutation.isPending}
-                            className="rounded-full border border-rose-400/20 bg-rose-400/10 px-4 py-2 text-sm text-rose-100 transition hover:bg-rose-400/20 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="rounded-md px-2.5 py-1.5 text-xs font-medium text-rose-600 transition-colors hover:bg-rose-50 hover:text-rose-700 dark:text-rose-400 dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
                           >
                             {t("卸载", "Uninstall")}
                           </button>
@@ -867,36 +857,31 @@ export function SkillsPage() {
           </div>
         </div>
 
-        <div className="rounded-[28px] border border-gray-100 dark:border-slate-800 bg-white dark:bg-[#0f172a] shadow-sm backdrop-blur-xl p-6">
+        <div className={surfacePanelClassName}>
           <div className="flex items-center justify-between gap-3">
             <div>
-              <div className="text-sm uppercase tracking-[0.24em] text-indigo-600/80 dark:text-indigo-400/70 font-semibold">
-                {t("未托管", "Unmanaged")}
-              </div>
+                <div className="text-sm font-semibold uppercase tracking-widest text-blue-600 dark:text-blue-300">
+                  {t("未托管", "Unmanaged")}
+                </div>
               <h4 className="mt-3 text-xl font-semibold tracking-tight text-slate-900 dark:text-white">
                 {t("导入已有本地技能", "Import existing local skills")}
               </h4>
             </div>
-            <div className="rounded-xl border border-gray-100 dark:border-slate-800 bg-white dark:bg-[#0f172a] shadow-sm hover:border-gray-200 dark:border-slate-700 transition-all duration-300 px-3 py-2 text-right">
-              <div className="text-xs uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 dark:text-slate-400">
-                {t("候选项", "Candidates")}
-              </div>
-              <div className="mt-1 text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
-                {formatCount(
-                  filteredUnmanagedSkills.length,
-                  unmanagedSkills.length
-                )}
-              </div>
-            </div>
+            <Badge tone="slate">
+              {t("候选项", "Candidates")}: {formatCount(
+                filteredUnmanagedSkills.length,
+                unmanagedSkills.length
+              )}
+            </Badge>
           </div>
-          <p className="mt-3 text-sm leading-6 text-slate-400 dark:text-slate-500 dark:text-slate-400">
+          <p className="mt-3 max-w-lg text-sm leading-6 text-slate-600 dark:text-slate-400">
             {t(
               "扫描 ~/.skill-studio、~/.cc-switch 以及受支持应用的技能目录，寻找已包含 SKILL.md 但尚未被 Skill Studio 跟踪的技能。",
               "Scan ~/.skill-studio, ~/.cc-switch, and supported app skill folders for directories that already contain SKILL.md but are not yet tracked by Skill Studio."
             )}
           </p>
 
-          <div className="mt-6 rounded-xl border border-gray-100 dark:border-slate-800 bg-white dark:bg-[#0f172a] shadow-sm hover:border-gray-200 dark:border-slate-700 transition-all duration-300 p-4">
+          <div className={sectionCardClassName}>
             <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
               <div>
                 <div className="text-sm font-medium text-slate-900 dark:text-white">
@@ -911,7 +896,7 @@ export function SkillsPage() {
                         "Select one or more unmanaged skills"
                       )}
                 </div>
-                <p className="mt-1 text-xs leading-5 text-slate-400 dark:text-slate-500 dark:text-slate-400">
+                    <p className="mt-1 text-[11px] font-medium text-slate-500/80 dark:text-slate-400/80">
                   {selectedUnmanagedSkills.length > 0
                     ? selectedFilteredUnmanagedCount ===
                       selectedUnmanagedSkills.length
@@ -942,7 +927,7 @@ export function SkillsPage() {
                     importSkillsMutation.isPending ||
                     filteredUnmanagedSkills.length === 0
                   }
-                  className="rounded-full border border-gray-100 dark:border-slate-800 bg-slate-100 dark:bg-white/5 px-4 py-2 text-sm text-slate-800 dark:text-slate-200 transition hover:bg-slate-200 dark:bg-white/[0.06] active:scale-95 transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-60"
+                  className={neutralButtonClassName}
                 >
                   {allFilteredUnmanagedSelected
                     ? t("取消当前筛选选择", "Deselect filtered")
@@ -955,7 +940,7 @@ export function SkillsPage() {
                     importSkillsMutation.isPending ||
                     selectedUnmanagedSkills.length === 0
                   }
-                  className="rounded-full border border-gray-100 dark:border-slate-800 bg-slate-100 dark:bg-white/5 px-4 py-2 text-sm text-slate-800 dark:text-slate-200 transition hover:bg-slate-200 dark:bg-white/[0.06] active:scale-95 transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-60"
+                  className={neutralButtonClassName}
                 >
                   {t("清空已选", "Clear selected")}
                 </button>
@@ -966,7 +951,7 @@ export function SkillsPage() {
                     importSkillsMutation.isPending ||
                     selectedUnmanagedSkills.length === 0
                   }
-                  className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-4 py-2 text-sm font-medium text-indigo-900 dark:text-indigo-100 transition hover:bg-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-60"
+                  className={primaryButtonClassName}
                 >
                   {t("导入已选", "Import selected")}
                   {selectedUnmanagedSkills.length > 0
@@ -977,9 +962,9 @@ export function SkillsPage() {
             </div>
           </div>
 
-          <div className="mt-6 space-y-3">
+            <div className="mt-6 space-y-3">
             {unmanagedLoading ? (
-              <EmptyState
+              <EmptyPanel
                 title={t("正在扫描未托管技能", "Scanning unmanaged skills")}
                 description={t(
                   "正在检查应用目录、Skill Studio 工作区和 cc-switch SSOT，寻找可导入项。",
@@ -987,7 +972,7 @@ export function SkillsPage() {
                 )}
               />
             ) : unmanagedSkills.length === 0 ? (
-              <EmptyState
+              <EmptyPanel
                 title={t("未发现未托管技能", "No unmanaged skills found")}
                 description={t(
                   "当本地存在但尚未进入受管已安装列表的技能时，它们会显示在这里。",
@@ -995,7 +980,7 @@ export function SkillsPage() {
                 )}
               />
             ) : filteredUnmanagedSkills.length === 0 ? (
-              <EmptyState
+              <EmptyPanel
                 title={t(
                   "没有匹配搜索的未托管技能",
                   "No unmanaged skills match your search"
@@ -1019,10 +1004,10 @@ export function SkillsPage() {
                 return (
                   <article
                     key={skill.directory}
-                    className={[
-                      "rounded-xl border bg-white dark:bg-[#0f172a] shadow-sm hover:border-gray-200 dark:border-slate-700 transition-all duration-300 px-4 py-4",
-                      isSelected ? "border-emerald-400/30" : "border-gray-100 dark:border-slate-800",
-                    ].join(" ")}
+                      className={[
+                        "rounded-xl border bg-white dark:bg-[#0f172a]/70 hover:border-gray-200 dark:border-slate-700 transition-all duration-300 px-4 py-4",
+                        isSelected ? "border-blue-300 dark:border-blue-500/40" : "border-gray-200 dark:border-slate-800",
+                      ].join(" ")}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-start gap-3">
@@ -1036,13 +1021,13 @@ export function SkillsPage() {
                             )
                           }
                           disabled={importSkillsMutation.isPending}
-                          className="mt-1 h-4 w-4 rounded border-white/20 bg-slate-950/50 text-emerald-400 focus:ring-emerald-400/40"
+                          className="mt-1 h-4 w-4 rounded border-gray-300 bg-white text-blue-600 focus:ring-blue-500/30 dark:border-slate-600 dark:bg-slate-900"
                         />
                         <div>
                           <div className="font-medium text-slate-900 dark:text-white">
                             {skill.name}
                           </div>
-                          <div className="mt-1 text-sm text-slate-400 dark:text-slate-500 dark:text-slate-400">
+                           <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                             {skill.directory} ·{" "}
                             {skill.foundIn
                               .map(formatSourceLabel)
@@ -1050,11 +1035,9 @@ export function SkillsPage() {
                           </div>
                         </div>
                       </div>
-                      <span className="rounded-full border border-gray-100 dark:border-slate-800 bg-slate-100 dark:bg-white/5 px-3 py-1 text-xs text-slate-700 dark:text-slate-300">
-                        {t("本地", "Local")}
-                      </span>
+                      <Badge tone="slate">{t("本地", "Local")}</Badge>
                     </div>
-                    <p className="mt-3 text-sm leading-6 text-slate-400 dark:text-slate-500 dark:text-slate-400">
+                    <p className="mt-3 text-sm leading-snug text-slate-600 dark:text-slate-400">
                       {skill.description ??
                         t(
                           "SKILL.md 元数据中暂无描述。",
@@ -1080,12 +1063,12 @@ export function SkillsPage() {
                             }
                             disabled={importSkillsMutation.isPending}
                             className={[
-                              "rounded-full border px-3 py-1 text-xs transition",
-                              enabled
-                                ? "border-emerald-400/20 bg-emerald-400/10 text-indigo-900 dark:text-indigo-100"
-                                : "border-gray-100 dark:border-slate-800 bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:bg-white/[0.06] active:scale-95 transition-all duration-300",
-                            ].join(" ")}
-                          >
+                               appToggleBaseClassName,
+                               enabled
+                                 ? "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/12 dark:text-blue-100"
+                                  : "border-gray-200 bg-white text-slate-700 hover:border-gray-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800",
+                             ].join(" ")}
+                           >
                             {appLabels[app]}
                           </button>
                         );
@@ -1108,7 +1091,7 @@ export function SkillsPage() {
                         type="button"
                         onClick={() => handleImport(skill)}
                         disabled={importSkillsMutation.isPending}
-                        className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-4 py-2 text-sm font-medium text-indigo-900 dark:text-indigo-100 transition hover:bg-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-60"
+                        className={primaryButtonClassName}
                       >
                         {t("导入技能", "Import skill")}
                       </button>
@@ -1122,14 +1105,14 @@ export function SkillsPage() {
       </div>
 
       <aside className="space-y-6">
-        <div className="rounded-[28px] border border-gray-100 dark:border-slate-800 bg-white dark:bg-[#0f172a] shadow-sm backdrop-blur-xl p-6">
-          <div className="text-sm uppercase tracking-[0.24em] text-indigo-600/80 dark:text-indigo-400/70 font-semibold">
-            {t("安装目标", "Install target")}
-          </div>
+        <div className={surfacePanelClassName}>
+              <div className="text-sm font-semibold uppercase tracking-widest text-blue-600 dark:text-blue-300">
+                {t("安装目标", "Install target")}
+              </div>
           <h4 className="mt-3 text-xl font-semibold tracking-tight text-slate-900 dark:text-white">
             {t("新安装的默认应用", "Default app for new installs")}
           </h4>
-          <p className="mt-3 text-sm leading-6 text-slate-400 dark:text-slate-500 dark:text-slate-400">
+          <p className="mt-3 max-w-lg text-sm leading-6 text-slate-600 dark:text-slate-400">
             {t(
               "这里延续 cc-switch 的统一安装入口：新安装的技能会立即为所选应用启用，已有或导入技能仍可在下方按应用切换。",
               "Selecting a target app mirrors the cc-switch unified install entry: new installs enable the chosen app immediately, while existing or imported skills can be toggled per app below."
@@ -1142,10 +1125,10 @@ export function SkillsPage() {
                 type="button"
                 onClick={() => setCurrentApp(app)}
                 className={[
-                  "rounded-full border px-4 py-2 text-sm transition",
+                  "rounded-md border px-4 py-2 text-sm transition",
                   currentApp === app
-                    ? "border-indigo-200 dark:border-indigo-500/30 bg-indigo-100 dark:bg-indigo-500/15 text-indigo-900 dark:text-indigo-100"
-                    : "border-gray-100 dark:border-slate-800 bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:bg-white/[0.06] active:scale-95 transition-all duration-300",
+                    ? "border-blue-200 bg-blue-50 text-blue-700 shadow-sm dark:border-blue-500/30 dark:bg-blue-500/12 dark:text-blue-100"
+                    : "border-gray-200 bg-white text-slate-700 hover:border-gray-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800",
                 ].join(" ")}
               >
                 {appLabels[app]}
@@ -1154,14 +1137,14 @@ export function SkillsPage() {
           </div>
         </div>
 
-        <div className="rounded-[28px] border border-gray-100 dark:border-slate-800 bg-white dark:bg-[#0f172a] shadow-sm backdrop-blur-xl p-6">
-          <div className="text-sm uppercase tracking-[0.24em] text-indigo-600/80 dark:text-indigo-400/70 font-semibold">
-            {t("ZIP 安装", "ZIP install")}
-          </div>
+        <div className={surfacePanelClassName}>
+              <div className="text-sm font-semibold uppercase tracking-widest text-blue-600 dark:text-blue-300">
+                {t("ZIP 安装", "ZIP install")}
+              </div>
           <h4 className="mt-3 text-xl font-semibold tracking-tight text-slate-900 dark:text-white">
             {t("从本地压缩包安装", "Install from local archive")}
           </h4>
-          <p className="mt-3 text-sm leading-6 text-slate-400 dark:text-slate-500 dark:text-slate-400">
+          <p className="mt-3 max-w-lg text-sm leading-6 text-slate-600 dark:text-slate-400">
             {t(
               `可粘贴本地 ZIP 路径，或使用原生选择器挑选压缩包。压缩包可包含一个或多个基于 SKILL.md 的技能目录，新安装内容默认会为 ${appLabels[currentApp]} 启用。`,
               `Paste a local ZIP path or choose an archive with the native picker. Archives may contain one skill or multiple SKILL.md-based directories, and new installs will enable ${appLabels[currentApp]} by default.`
@@ -1176,13 +1159,13 @@ export function SkillsPage() {
                   "/绝对路径/skills.zip",
                   "/absolute/path/to/skills.zip"
                 )}
-                className="min-w-0 flex-1 rounded-xl border border-gray-100 dark:border-slate-800 bg-slate-950/50 px-4 py-3 text-sm text-slate-900 dark:text-white outline-none transition placeholder:text-slate-400 dark:text-slate-500 focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/20"
+                className={`min-w-0 h-11 flex-1 ${inputClassName}`}
               />
               <button
                 type="button"
                 onClick={handleChooseZip}
                 disabled={installSkillsFromZipMutation.isPending}
-                className="rounded-xl border border-gray-100 dark:border-slate-800 bg-slate-100 dark:bg-white/5 px-4 py-3 text-sm font-medium text-slate-800 dark:text-slate-200 transition hover:bg-slate-200 dark:bg-white/[0.06] active:scale-95 transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-60"
+                className={`h-11 ${neutralButtonClassName}`}
               >
                 {t("选择 ZIP", "Browse ZIP")}
               </button>
@@ -1193,7 +1176,7 @@ export function SkillsPage() {
               disabled={
                 installSkillsFromZipMutation.isPending || !zipPath.trim()
               }
-              className="w-full rounded-xl border border-indigo-200 dark:border-indigo-500/30 bg-indigo-50 dark:bg-indigo-500/10 px-4 py-3 text-sm font-medium text-indigo-900 dark:text-indigo-100 transition hover:bg-indigo-200 dark:bg-indigo-500/20 active:scale-95 transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-60"
+              className={`h-11 ${primaryButtonClassName}`}
             >
               {isZh
                 ? `安装 ZIP 到 ${appLabels[currentApp]}`
@@ -1202,29 +1185,24 @@ export function SkillsPage() {
           </div>
         </div>
 
-        <div className="rounded-[28px] border border-gray-100 dark:border-slate-800 bg-white dark:bg-[#0f172a] shadow-sm backdrop-blur-xl p-6">
+        <div className={surfacePanelClassName}>
           <div className="flex items-center justify-between gap-3">
             <div>
-              <div className="text-sm uppercase tracking-[0.24em] text-indigo-600/80 dark:text-indigo-400/70 font-semibold">
-                {t("发现", "Discovery")}
-              </div>
+                <div className="text-sm font-semibold uppercase tracking-widest text-blue-600 dark:text-blue-300">
+                  {t("发现", "Discovery")}
+                </div>
               <h4 className="mt-3 text-xl font-semibold tracking-tight text-slate-900 dark:text-white">
                 {t("可用技能", "Available skills")}
               </h4>
             </div>
-            <div className="rounded-xl border border-gray-100 dark:border-slate-800 bg-white dark:bg-[#0f172a] shadow-sm hover:border-gray-200 dark:border-slate-700 transition-all duration-300 px-3 py-2 text-right">
-              <div className="text-xs uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 dark:text-slate-400">
-                {t("覆盖数", "Coverage")}
-              </div>
-              <div className="mt-1 text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
-                {formatCount(
-                  filteredDiscoverableSkills.length,
-                  discoverableSkills.length
-                )}
-              </div>
-            </div>
+            <Badge tone="slate">
+              {t("覆盖数", "Coverage")}: {formatCount(
+                filteredDiscoverableSkills.length,
+                discoverableSkills.length
+              )}
+            </Badge>
           </div>
-          <p className="mt-3 text-sm leading-6 text-slate-400 dark:text-slate-500 dark:text-slate-400">
+          <p className="mt-3 max-w-lg text-sm leading-6 text-slate-600 dark:text-slate-400">
             {isZh
               ? `当前有 ${repos.length} 个已配置仓库通过迁移后的 API 层提供。`
               : `${repos.length} configured repositories are currently exposed through the migrated API layer.`}
@@ -1232,7 +1210,7 @@ export function SkillsPage() {
 
           <div className="mt-6 space-y-3">
             {discoverableLoading ? (
-              <EmptyState
+              <EmptyPanel
                 title={t("正在加载可发现技能", "Loading discoverable skills")}
                 description={t(
                   "正在获取基于仓库的技能候选项。",
@@ -1240,7 +1218,7 @@ export function SkillsPage() {
                 )}
               />
             ) : discoverableSkills.length === 0 ? (
-              <EmptyState
+              <EmptyPanel
                 title={t("暂无可发现技能", "No discoverable skills")}
                 description={t(
                   "请在 Sources 中添加或启用仓库以填充该列表。",
@@ -1248,7 +1226,7 @@ export function SkillsPage() {
                 )}
               />
             ) : filteredDiscoverableSkills.length === 0 ? (
-              <EmptyState
+              <EmptyPanel
                 title={t(
                   "没有匹配搜索的可发现技能",
                   "No discoverable skills match your search"
@@ -1280,22 +1258,20 @@ export function SkillsPage() {
                 return (
                   <article
                     key={skill.key}
-                    className="rounded-xl border border-gray-100 dark:border-slate-800 bg-white dark:bg-[#0f172a] shadow-sm hover:border-gray-200 dark:border-slate-700 transition-all duration-300 px-4 py-4"
+                    className="rounded-xl border border-gray-200 bg-white px-4 py-4 transition-colors hover:border-gray-300 dark:border-slate-700 dark:bg-slate-900/40 dark:hover:border-slate-600"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="font-medium text-slate-900 dark:text-white">
                           {skill.name}
                         </div>
-                        <div className="mt-1 text-sm text-slate-400 dark:text-slate-500 dark:text-slate-400">
-                          {skill.repoOwner}/{skill.repoName} · {skill.directory}
-                        </div>
+                         <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                           {skill.repoOwner}/{skill.repoName} · {skill.directory}
+                         </div>
                       </div>
-                      <span className="rounded-full border border-gray-100 dark:border-slate-800 bg-slate-100 dark:bg-white/5 px-3 py-1 text-xs text-slate-700 dark:text-slate-300">
-                        {skill.repoBranch}
-                      </span>
+                      <Badge tone="violet">{skill.repoBranch}</Badge>
                     </div>
-                    <p className="mt-3 text-sm leading-6 text-slate-400 dark:text-slate-500 dark:text-slate-400">
+                    <p className="mt-3 text-sm leading-snug text-slate-600 dark:text-slate-400">
                       {skill.description}
                     </p>
                     <div className="mt-4 flex flex-wrap gap-2">
@@ -1304,10 +1280,10 @@ export function SkillsPage() {
                           href={skill.readmeUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="rounded-full border border-gray-100 dark:border-slate-800 bg-slate-100 dark:bg-white/5 px-4 py-2 text-sm text-slate-800 dark:text-slate-200 transition hover:bg-slate-200 dark:bg-white/[0.06] active:scale-95 transition-all duration-300"
-                        >
-                          {t("文档", "Docs")}
-                        </a>
+                              className="px-2.5 py-1.5 text-xs font-medium text-slate-500 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+                            >
+                              {t("文档", "Docs")}
+                            </a>
                       ) : null}
                       <button
                         type="button"
@@ -1315,7 +1291,7 @@ export function SkillsPage() {
                         disabled={
                           installSkillMutation.isPending || alreadyEnabled
                         }
-                        className="rounded-full border border-indigo-200 dark:border-indigo-500/30 bg-indigo-50 dark:bg-indigo-500/10 px-4 py-2 text-sm font-medium text-indigo-900 dark:text-indigo-100 transition hover:bg-indigo-200 dark:bg-indigo-500/20 active:scale-95 transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-60"
+                        className={primaryButtonClassName}
                       >
                         {buttonLabel}
                       </button>
@@ -1328,68 +1304,7 @@ export function SkillsPage() {
         </div>
       </aside>
     </section>
-  );
-}
-
-type EmptyStateProps = {
-  title: string;
-  description: string;
-};
-
-function EmptyState({ title, description }: EmptyStateProps) {
-  return (
-    <div className="rounded-xl border border-dashed border-gray-200 dark:border-slate-800 bg-white dark:bg-[#0f172a] shadow-sm px-5 py-10 text-center">
-      <div className="text-lg font-bold text-gray-900 dark:text-white">{title}</div>
-      <p className="mt-2 text-sm leading-6 text-gray-500 dark:text-gray-400">{description}</p>
-    </div>
-  );
-}
-
-type CompactMetricCardProps = {
-  icon: React.ElementType;
-  iconColor: string;
-  iconBg: string;
-  label: string;
-  value: string;
-  helper: string;
-};
-
-function CompactMetricCard({ icon: Icon, iconColor, iconBg, label, value, helper }: CompactMetricCardProps) {
-  return (
-    <div className="bg-white dark:bg-[#0f172a] rounded-xl p-4 shadow-sm border border-gray-100 dark:border-slate-800 transition-all duration-300">
-      <div className="flex items-center justify-between mb-3">
-        <div className={`p-1.5 rounded-md ${iconBg}`}>
-          <Icon className={`w-4 h-4 ${iconColor}`} />
-        </div>
-      </div>
-      <div className="text-2xl font-bold text-gray-900 dark:text-white mb-0.5">{value}</div>
-      <div className="text-[11px] font-medium uppercase text-slate-500 dark:text-slate-400">{label}</div>
-      <div className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">{helper}</div>
-    </div>
-  );
-}
-
-type QuickInfoCardProps = {
-  icon: React.ElementType;
-  iconColor: string;
-  iconBg: string;
-  title: string;
-  value: string;
-  description: string;
-};
-
-function QuickInfoCard({ icon: Icon, iconColor, iconBg, title, value, description }: QuickInfoCardProps) {
-  return (
-    <div className="bg-white dark:bg-[#0f172a] rounded-xl p-4 shadow-sm border border-gray-100 dark:border-slate-800 transition-all duration-300">
-      <div className="flex items-center justify-between mb-3">
-        <div className={`p-1.5 rounded-md ${iconBg}`}>
-          <Icon className={`w-4 h-4 ${iconColor}`} />
-        </div>
-      </div>
-      <div className="text-2xl font-bold text-gray-900 dark:text-white mb-0.5">{value}</div>
-      <div className="text-[11px] font-medium uppercase text-slate-500 dark:text-slate-400">{title}</div>
-      <div className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 leading-relaxed">{description}</div>
-    </div>
+  </section>
   );
 }
 

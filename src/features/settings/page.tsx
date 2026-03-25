@@ -1,6 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
+import type { ElementType } from "react";
+import { FolderCog, Orbit, ShieldCheck, Waypoints } from "lucide-react";
 import { getAppOverview } from "../../shared/lib/tauri";
 import { useI18n } from "../../shared/lib/i18n";
+import {
+  Badge,
+  EmptyPanel,
+  KeyValueList,
+  PageIntro,
+  PageLayout,
+  Panel,
+  StatCard,
+} from "../../shared/components/workbench-ui";
 
 export function SettingsPage() {
   const { isZh } = useI18n();
@@ -29,71 +40,125 @@ export function SettingsPage() {
     : [];
 
   return (
-    <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-      <div className="rounded-[28px] border border-gray-100 dark:border-slate-800 bg-white dark:bg-[#0f172a] shadow-sm backdrop-blur-xl p-6">
-        <div className="text-sm uppercase tracking-[0.24em] text-indigo-600/80 dark:text-indigo-400/70 font-semibold">
-          {isZh ? "设置" : "Settings"}
-        </div>
-        <h3 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">
-          {isZh ? "环境默认值" : "Environment defaults"}
-        </h3>
-        <p className="mt-3 text-sm leading-6 text-slate-400 dark:text-slate-500 dark:text-slate-400">
-          {isZh
-            ? "这个面板现在通过真实的 Tauri overview 命令获取数据，不再依赖静态骨架内容。"
-            : "This panel is now backed by the real Tauri overview command instead of static scaffold data."}
-        </p>
+    <PageLayout>
+      <PageIntro
+        eyebrow={isZh ? "设置" : "Settings"}
+        title={isZh ? "环境与策略" : "Environment and policies"}
+        description={
+          isZh
+            ? "Settings 页面展示当前工作区的真实默认值、宿主支持与迁移边界。界面保持安静，避免和 Installed 工作台竞争注意力。"
+            : "Settings surfaces the real workspace defaults, supported hosts, and migration boundaries. The page stays deliberately quiet so it does not compete with the Installed workbench."
+        }
+        aside={
+          <>
+            <StatCard
+              icon={FolderCog}
+              label={isZh ? "工作区" : "Workspace"}
+              value={overview?.workspaceRoot ?? "—"}
+              helper={isZh ? "当前根目录" : "Current root"}
+              tone="blue"
+            />
+            <StatCard
+              icon={Orbit}
+              label={isZh ? "同步模式" : "Sync modes"}
+              value={overview?.syncModes.length ? String(overview.syncModes.length) : "—"}
+              helper={isZh ? "已暴露策略" : "Exposed strategies"}
+              tone="violet"
+            />
+          </>
+        }
+      />
 
-        <div className="mt-6 space-y-4">
+      <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+        <Panel
+          eyebrow={isZh ? "默认值" : "Defaults"}
+          title={isZh ? "环境默认值" : "Environment defaults"}
+          description={
+            isZh
+              ? "该面板由真实的 Tauri overview 命令驱动。"
+              : "This panel is backed by the real Tauri overview command."
+          }
+        >
           {isLoading ? (
-            <InfoBanner
-              message={
-                isZh ? "正在加载应用概览..." : "Loading application overview..."
-              }
+            <EmptyPanel
+              title={isZh ? "正在加载应用概览" : "Loading application overview"}
+              description={isZh ? "正在请求 Tauri 后端。" : "Requesting the Tauri backend."}
             />
           ) : error instanceof Error ? (
             <InfoBanner message={error.message} tone="error" />
           ) : (
-            settings.map(([label, value]) => (
-              <div
-                key={label}
-                className="flex items-center justify-between gap-4 rounded-xl border border-gray-100 dark:border-slate-800 bg-white dark:bg-[#0f172a] shadow-sm hover:border-gray-200 dark:border-slate-700 transition-all duration-300 px-4 py-4"
-              >
-                <span className="text-sm text-slate-400 dark:text-slate-500 dark:text-slate-400">{label}</span>
-                <span className="text-right text-sm font-medium text-slate-900 dark:text-white">
-                  {value}
-                </span>
-              </div>
-            ))
+            <KeyValueList
+              items={settings.map(([label, value]) => ({
+                label,
+                value,
+                mono: label === (isZh ? "工作区根目录" : "Workspace root"),
+              }))}
+            />
           )}
-        </div>
-      </div>
+        </Panel>
 
-      <div className="rounded-[28px] border border-gray-100 dark:border-slate-800 bg-white dark:bg-[#0f172a] shadow-sm backdrop-blur-xl p-6">
-        <div className="text-sm uppercase tracking-[0.24em] text-indigo-600/80 dark:text-indigo-400/70 font-semibold">
-          {isZh ? "架构" : "Architecture"}
+        <div className="space-y-6">
+          <Panel
+            eyebrow={isZh ? "宿主" : "Hosts"}
+            title={isZh ? "检测到的平台" : "Detected platforms"}
+            description={
+              isZh
+                ? "这些信息来自 overview.supportedApps。"
+                : "These entries come directly from overview.supportedApps."
+            }
+          >
+            <div className="flex flex-wrap gap-2.5">
+              {overview?.supportedApps?.length ? (
+                overview.supportedApps.map((app) => (
+                  <Badge key={app} tone="blue">
+                    {app}
+                  </Badge>
+                ))
+              ) : (
+                <Badge tone="slate">{isZh ? "暂无数据" : "No data"}</Badge>
+              )}
+            </div>
+          </Panel>
+
+          <Panel
+            eyebrow={isZh ? "边界" : "Boundaries"}
+            title={isZh ? "迁移边界" : "Migration boundaries"}
+            description={
+              isZh
+                ? "保留 Skill Studio 的界面风格，同时逐步接入真实能力。"
+                : "Keep the Skill Studio visual language while progressively wiring in the real platform capabilities."
+            }
+          >
+            <div className="space-y-3 text-sm leading-6 text-slate-600 dark:text-slate-400">
+              <Guideline
+                icon={ShieldCheck}
+                text={
+                  isZh
+                    ? "优先维持与 cc-switch 的技能行为兼容，再做产品级增强。"
+                    : "Keep cc-switch skill behavior compatible before layering product-facing enhancements."
+                }
+              />
+              <Guideline
+                icon={Waypoints}
+                text={
+                  isZh
+                    ? "优先复用后端/服务层能力承接清单、仓库、安装生命周期与备份。"
+                    : "Prefer backend and service-layer reuse for inventory, repositories, install lifecycle, and backup flows."
+                }
+              />
+              <Guideline
+                icon={FolderCog}
+                text={
+                  isZh
+                    ? "界面继续沿着桌面控制台方向演进，而不是回到营销页面式的大段滚动。"
+                    : "Continue evolving toward a desktop console rather than regressing into a marketing-style scrolling layout."
+                }
+              />
+            </div>
+          </Panel>
         </div>
-        <h3 className="mt-2 text-xl font-semibold tracking-tight text-slate-900 dark:text-white">
-          {isZh ? "迁移边界" : "Migration boundaries"}
-        </h3>
-        <ul className="mt-4 space-y-3 text-sm leading-6 text-slate-400 dark:text-slate-500 dark:text-slate-400">
-          <li>
-            {isZh
-              ? "在新增产品特性之前，先保持与 cc-switch 的技能行为兼容。"
-              : "Keep cc-switch skill behavior compatible before adding product-specific enhancements."}
-          </li>
-          <li>
-            {isZh
-              ? "优先复用后端/服务层能力来承接清单、仓库、安装生命周期与备份。"
-              : "Prefer backend/service reuse for inventory, repositories, install lifecycle, and backups."}
-          </li>
-          <li>
-            {isZh
-              ? "保留 Skill Studio 自己的界面风格，而不是直接拖入 cc-switch 更重的组件树。"
-              : "Rebuild UI in Skill Studio style instead of dragging in cc-switch’s heavier component tree."}
-          </li>
-        </ul>
       </div>
-    </section>
+    </PageLayout>
   );
 }
 
@@ -109,11 +174,30 @@ function InfoBanner({
       className={[
         "rounded-xl border px-4 py-4 text-sm",
         tone === "error"
-          ? "border-rose-400/20 bg-rose-400/10 text-rose-100"
-          : "border-gray-100 dark:border-slate-800 bg-white dark:bg-[#0f172a] shadow-sm hover:border-gray-200 dark:border-slate-700 transition-all duration-300 text-slate-700 dark:text-slate-300",
+          ? "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/12 dark:text-rose-100"
+          : "border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-300",
       ].join(" ")}
     >
       {message}
+    </div>
+  );
+}
+
+function Guideline({
+  icon: Icon,
+  text,
+}: {
+  icon: ElementType;
+  text: string;
+}) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 dark:border-slate-700 dark:bg-slate-900/70">
+      <div className="flex items-start gap-3">
+        <div className="rounded-xl border border-slate-200 bg-white p-2 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+          <Icon className="h-4 w-4" />
+        </div>
+        <div>{text}</div>
+      </div>
     </div>
   );
 }

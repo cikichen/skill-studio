@@ -7,6 +7,10 @@ import "./index.css";
 
 const queryClient = new QueryClient();
 
+if (typeof document !== "undefined") {
+  document.documentElement.classList.add("dark");
+}
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>

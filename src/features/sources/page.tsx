@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Boxes, Compass, HardDriveDownload, Link2 } from "lucide-react";
 import {
   useAddSkillRepo,
   useDiscoverableSkills,
@@ -6,6 +7,18 @@ import {
   useSkillRepos,
 } from "../skills/use-skills";
 import { useI18n } from "../../shared/lib/i18n";
+import {
+  EmptyPanel,
+  PageIntro,
+  PageLayout,
+  Panel,
+  StatCard,
+  Badge,
+  inputClassName,
+  primaryButtonClassName,
+  dangerButtonClassName,
+  listItemClassName,
+} from "../../shared/components/workbench-ui";
 
 export function SourcesPage() {
   const { isZh } = useI18n();
@@ -70,22 +83,46 @@ export function SourcesPage() {
   }
 
   return (
-    <section className="space-y-6">
-      <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-        <div className="rounded-[28px] border border-gray-100 dark:border-slate-800 bg-white dark:bg-[#0f172a] shadow-sm backdrop-blur-xl p-6">
-          <div className="text-sm uppercase tracking-[0.24em] text-indigo-600/80 dark:text-indigo-400/70 font-semibold">
-            {isZh ? "仓库" : "Repositories"}
-          </div>
-          <h3 className="mt-3 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">
-            {isZh ? "已配置的技能来源" : "Configured skill sources"}
-          </h3>
-          <p className="mt-3 text-sm leading-6 text-slate-400 dark:text-slate-500 dark:text-slate-400">
-            {isZh
-              ? "这里延续了 cc-switch 的仓库管理能力：仓库配置现在由 Skill Studio 后端持久化。"
-              : "This is the first migrated slice from cc-switch: repositories are now persisted by the Skill Studio backend."}
-          </p>
+    <PageLayout>
+      <PageIntro
+        eyebrow={isZh ? "来源" : "Sources"}
+        title={isZh ? "技能来源与发现" : "Skill sources and discovery"}
+        description={
+          isZh
+            ? "这一页专门负责仓库、ZIP 与本地导入入口。把来源管理与技能工作台拆开，避免 Installed 页面承担过多上下文。"
+            : "This workbench is dedicated to repositories, ZIP flows, and discovery so Installed does not need to carry every import context at once."
+        }
+        aside={
+          <>
+            <StatCard
+              icon={Boxes}
+              label={isZh ? "仓库" : "Repositories"}
+              value={String(repos.length)}
+              helper={isZh ? "已配置来源" : "Configured sources"}
+              tone="blue"
+            />
+            <StatCard
+              icon={Compass}
+              label={isZh ? "发现" : "Discovery"}
+              value={String(discoverableSkills.length)}
+              helper={isZh ? "可发现技能" : "Discoverable skills"}
+              tone="violet"
+            />
+          </>
+        }
+      />
 
-          <div className="mt-6 grid gap-3 md:grid-cols-[1fr_180px_auto]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.05fr)_0.95fr]">
+        <Panel
+          eyebrow={isZh ? "仓库" : "Repositories"}
+          title={isZh ? "已配置的技能来源" : "Configured skill sources"}
+          description={
+            isZh
+              ? "仓库配置由 Skill Studio 后端持久化。这里的表单只负责维护来源，不再承担安装页面的其它职责。"
+              : "Repositories are persisted by the Skill Studio backend. This form stays focused on source maintenance instead of mixing in installation workflows."
+          }
+        >
+          <div className="grid gap-3 md:grid-cols-[1fr_160px_auto]">
             <input
               value={repoUrl}
               onChange={(event) => setRepoUrl(event.target.value)}
@@ -94,27 +131,29 @@ export function SourcesPage() {
                   ? "owner/name 或 https://github.com/owner/name"
                   : "owner/name or https://github.com/owner/name"
               }
-              className="rounded-xl border border-gray-100 dark:border-slate-800 bg-white dark:bg-[#0f172a] shadow-sm hover:border-gray-200 dark:border-slate-700 transition-all duration-300 px-4 py-3 text-sm text-slate-900 dark:text-white outline-none placeholder:text-slate-400 dark:text-slate-500"
+              className={inputClassName}
             />
             <input
               value={branch}
               onChange={(event) => setBranch(event.target.value)}
               placeholder={isZh ? "分支" : "branch"}
-              className="rounded-xl border border-gray-100 dark:border-slate-800 bg-white dark:bg-[#0f172a] shadow-sm hover:border-gray-200 dark:border-slate-700 transition-all duration-300 px-4 py-3 text-sm text-slate-900 dark:text-white outline-none placeholder:text-slate-400 dark:text-slate-500"
+              className={inputClassName}
             />
-            <button
-              onClick={handleAddRepo}
-              className="rounded-xl border border-indigo-200 dark:border-indigo-500/30 bg-indigo-50 dark:bg-indigo-500/10 px-4 py-3 text-sm font-medium text-indigo-900 dark:text-indigo-100 transition hover:bg-indigo-200 dark:bg-indigo-500/20 active:scale-95 transition-all duration-300"
-            >
+            <button type="button" onClick={handleAddRepo} className={primaryButtonClassName}>
               {isZh ? "添加仓库" : "Add repo"}
             </button>
           </div>
 
-          {error ? <p className="mt-3 text-sm text-rose-300">{error}</p> : null}
+          {error ? (
+            <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/12 dark:text-rose-100">
+              {error}
+            </div>
+          ) : null}
 
           <div className="mt-6 space-y-3">
             {reposLoading ? (
-              <SourceEmptyState
+              <EmptyPanel
+                title={isZh ? "正在加载仓库" : "Loading repositories"}
                 description={
                   isZh
                     ? "正在从 Rust 存储加载仓库..."
@@ -122,7 +161,8 @@ export function SourcesPage() {
                 }
               />
             ) : repos.length === 0 ? (
-              <SourceEmptyState
+              <EmptyPanel
+                title={isZh ? "还没有配置仓库" : "No repositories yet"}
                 description={
                   isZh
                     ? "还没有配置任何仓库。"
@@ -133,47 +173,45 @@ export function SourcesPage() {
               repos.map((repo) => {
                 const repoKey = `${repo.owner}/${repo.name}`;
                 return (
-                  <article
-                    key={repoKey}
-                    className="flex flex-col gap-3 rounded-xl border border-gray-100 dark:border-slate-800 bg-white dark:bg-[#0f172a] shadow-sm hover:border-gray-200 dark:border-slate-700 transition-all duration-300 px-4 py-4 md:flex-row md:items-center md:justify-between"
-                  >
-                    <div>
-                      <div className="font-medium text-slate-900 dark:text-white">{repoKey}</div>
-                      <div className="mt-1 text-sm text-slate-400 dark:text-slate-500 dark:text-slate-400">
-                        {isZh ? "分支" : "branch"} {repo.branch} ·{" "}
-                        {groupedSkills.get(repoKey) ?? 0}{" "}
-                        {isZh ? "个可发现技能" : "discoverable skills"}
+                  <article key={repoKey} className={listItemClassName}>
+                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="text-base font-semibold text-slate-900 dark:text-slate-100">{repoKey}</div>
+                          <Badge tone="blue">{repo.branch}</Badge>
+                        </div>
+                        <div className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                          {isZh ? "可发现技能" : "Discoverable skills"}: {groupedSkills.get(repoKey) ?? 0}
+                        </div>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveRepo(repo.owner, repo.name)}
+                        className={dangerButtonClassName}
+                      >
+                        {isZh ? "移除" : "Remove"}
+                      </button>
                     </div>
-                    <button
-                      onClick={() => handleRemoveRepo(repo.owner, repo.name)}
-                      className="rounded-full border border-rose-400/20 bg-rose-400/10 px-4 py-2 text-sm text-rose-100 transition hover:bg-rose-400/20"
-                    >
-                      {isZh ? "移除" : "Remove"}
-                    </button>
                   </article>
                 );
               })
             )}
           </div>
-        </div>
+        </Panel>
 
-        <div className="rounded-[28px] border border-gray-100 dark:border-slate-800 bg-white dark:bg-[#0f172a] shadow-sm backdrop-blur-xl p-6">
-          <div className="text-sm uppercase tracking-[0.24em] text-indigo-600/80 dark:text-indigo-400/70 font-semibold">
-            {isZh ? "发现" : "Discovery"}
-          </div>
-          <h3 className="mt-3 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">
-            {isZh ? "可用技能" : "Available skills"}
-          </h3>
-          <p className="mt-3 text-sm leading-6 text-slate-400 dark:text-slate-500 dark:text-slate-400">
-            {isZh
-              ? "当前会从已配置的 GitHub 仓库下载 ZIP、扫描真实目录中的 SKILL.md，并在需要时自动回退分支。"
-              : "Discoverable skills are now fetched from the configured GitHub repositories by downloading repository ZIPs, scanning real directories for SKILL.md, and resolving branch fallbacks when needed."}
-          </p>
-
-          <div className="mt-6 space-y-3">
+        <Panel
+          eyebrow={isZh ? "发现" : "Discovery"}
+          title={isZh ? "可用技能" : "Available skills"}
+          description={
+            isZh
+              ? "可发现技能来自当前已配置仓库。这里只展示真实扫描结果，不再模拟营销页面式数据可视化。"
+              : "Discoverable skills come from configured repositories. This pane shows real scan output instead of decorative marketing analytics."
+          }
+        >
+          <div className="space-y-3">
             {discoverableSkills.length === 0 ? (
-              <SourceEmptyState
+              <EmptyPanel
+                title={isZh ? "发现列表为空" : "Discovery is empty"}
                 description={
                   isZh
                     ? "添加仓库后即可填充发现列表。"
@@ -182,39 +220,30 @@ export function SourcesPage() {
               />
             ) : (
               discoverableSkills.map((skill) => (
-                <article
-                  key={skill.key}
-                  className="rounded-xl border border-gray-100 dark:border-slate-800 bg-white dark:bg-[#0f172a] shadow-sm hover:border-gray-200 dark:border-slate-700 transition-all duration-300 px-4 py-4"
-                >
+                <article key={skill.key} className={listItemClassName}>
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <div className="font-medium text-slate-900 dark:text-white">{skill.name}</div>
-                      <div className="mt-1 text-sm text-slate-400 dark:text-slate-500 dark:text-slate-400">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="text-base font-semibold text-slate-900 dark:text-slate-100">{skill.name}</div>
+                        <Badge tone="violet">{skill.repoBranch}</Badge>
+                      </div>
+                      <div className="mt-2 flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                        <Link2 className="h-4 w-4 text-slate-400 dark:text-slate-500" />
                         {skill.repoOwner}/{skill.repoName} · {skill.directory}
                       </div>
                     </div>
-                    <span className="rounded-full border border-gray-100 dark:border-slate-800 bg-slate-100 dark:bg-white/5 px-3 py-1 text-xs text-slate-700 dark:text-slate-300">
-                      {skill.repoBranch}
-                    </span>
+                    <div className="rounded-xl border border-violet-200 bg-violet-50 p-2 text-violet-600 dark:border-violet-500/30 dark:bg-violet-500/12 dark:text-violet-200">
+                      <HardDriveDownload className="h-4 w-4" />
+                    </div>
                   </div>
-                  <p className="mt-3 text-sm leading-6 text-slate-400 dark:text-slate-500 dark:text-slate-400">
-                    {skill.description}
-                  </p>
+                  <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-400">{skill.description}</p>
                 </article>
               ))
             )}
           </div>
-        </div>
+        </Panel>
       </div>
-    </section>
-  );
-}
-
-function SourceEmptyState({ description }: { description: string }) {
-  return (
-    <div className="rounded-xl border border-dashed border-gray-100 dark:border-slate-800 bg-white dark:bg-[#0f172a] shadow-sm px-5 py-8 text-sm text-slate-400 dark:text-slate-500 dark:text-slate-400">
-      {description}
-    </div>
+    </PageLayout>
   );
 }
 

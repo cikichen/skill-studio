@@ -32,3 +32,4 @@ dist-ssr
 # Temporary Script Files
 refactor_theme.js
 replace_styles.py
+.ace-tool/
