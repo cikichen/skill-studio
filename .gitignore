@@ -28,6 +28,17 @@ dist-ssr
 .claude/
 .codex/
 .snow/
+.codebuddy/
+.continue/
+.cursor/
+.gemini/
+.kiro/
+.opencode/
+.qoder/
+.roo/
+.trae/
+.windsurf/
+.github/prompts/
 
 # Temporary Script Files
 refactor_theme.js
