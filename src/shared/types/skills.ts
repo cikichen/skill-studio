@@ -1,4 +1,28 @@
-export type AppId = "claude" | "codex" | "gemini" | "opencode" | "openclaw";
+export type SkillKind = "installed" | "unmanaged" | "discoverable";
+
+export const APP_IDS = ["claude", "codex", "gemini", "opencode", "openclaw"] as const;
+
+export type AppId = (typeof APP_IDS)[number];
+
+export function isKnownAppId(value: string): value is AppId {
+  return (APP_IDS as readonly string[]).includes(value);
+}
+
+export function getSupportedAppIds(supportedApps?: readonly string[] | null): AppId[] {
+  if (!supportedApps?.length) {
+    return [];
+  }
+
+  const uniqueAppIds = new Set<AppId>();
+
+  supportedApps.forEach((app) => {
+    if (isKnownAppId(app)) {
+      uniqueAppIds.add(app);
+    }
+  });
+
+  return Array.from(uniqueAppIds);
+}
 
 export type SkillApps = {
   claude: boolean;
@@ -57,6 +81,39 @@ export type UnmanagedSkill = {
   foundIn: string[];
   path: string;
 };
+
+export type SkillDetail = {
+  kind: SkillKind;
+  name: string;
+  directory: string;
+  description?: string | null;
+  readmeUrl?: string | null;
+  readmeContent: string | null;
+  repoOwner?: string | null;
+  repoName?: string | null;
+  repoBranch?: string | null;
+  path?: string | null;
+  foundIn?: string[] | null;
+  installedAt?: number | null;
+  apps?: SkillApps | null;
+};
+
+export type SkillDetailQuery = {
+  kind: SkillKind;
+  name: string;
+  directory: string;
+  description?: string | null;
+  readmeUrl?: string | null;
+  repoOwner?: string | null;
+  repoName?: string | null;
+  repoBranch?: string | null;
+  path?: string | null;
+  foundIn?: string[] | null;
+  installedAt?: number | null;
+  apps?: SkillApps | null;
+};
+
+export type SkillDetailInput = SkillDetailQuery;
 
 export type ImportSkillSelection = {
   directory: string;

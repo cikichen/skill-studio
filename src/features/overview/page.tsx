@@ -1,13 +1,14 @@
-import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, type ComponentType } from "react";
 import {
   Archive,
-  Boxes,
+  ArrowRight,
   FolderCog,
   HardDriveDownload,
   Sparkles,
 } from "lucide-react";
-import { getAppOverview } from "../../shared/lib/tauri";
+import { Link } from "react-router-dom";
+import { useAppOverview } from "../../shared/lib/tauri";
+import { countEnabledApps, formatUnixTime, getErrorMessage } from "../../shared/lib/format";
 import {
   getAppLabels,
   getLocaleForLanguage,
@@ -19,20 +20,29 @@ import {
   useSkillRepos,
   useUnmanagedSkills,
 } from "../skills/use-skills";
-import type { AppId } from "../../shared/types/skills";
 import {
-  ActionTile,
+  getSupportedAppIds,
+  type InstalledSkill,
+  type SkillBackupEntry,
+  type SkillRepo,
+  type UnmanagedSkill,
+} from "../../shared/types/skills";
+
+import {
   Badge,
-  EmptyPanel,
-  KeyValueList,
-  PageIntro,
+  InlineAlert,
   PageLayout,
   Panel,
-  StatCard,
+  QueryHint,
+  SectionSkeleton,
+  WorkbenchOverview,
   listItemClassName,
 } from "../../shared/components/workbench-ui";
 
-const APP_IDS: AppId[] = ["claude", "codex", "gemini", "opencode", "openclaw"];
+const EMPTY_INSTALLED_SKILLS: InstalledSkill[] = [];
+const EMPTY_BACKUPS: SkillBackupEntry[] = [];
+const EMPTY_REPOS: SkillRepo[] = [];
+const EMPTY_UNMANAGED_SKILLS: UnmanagedSkill[] = [];
 
 export function OverviewPage() {
   const { language, isZh } = useI18n();
@@ -40,28 +50,34 @@ export function OverviewPage() {
   const locale = getLocaleForLanguage(language);
   const t = (zh: string, en: string) => (isZh ? zh : en);
 
-  const {
-    data: overview,
-    isLoading: overviewLoading,
-    error: overviewError,
-  } = useQuery({
-    queryKey: ["app", "overview"],
-    queryFn: () => getAppOverview(),
-  });
-  const { data: installedSkills = [] } = useInstalledSkills();
-  const { data: backups = [] } = useSkillBackups();
-  const { data: repos = [] } = useSkillRepos();
-  const { data: unmanagedSkills = [] } = useUnmanagedSkills();
+  const overviewQuery = useAppOverview();
+  const installedQuery = useInstalledSkills();
+  const backupsQuery = useSkillBackups();
+  const reposQuery = useSkillRepos();
+  const unmanagedQuery = useUnmanagedSkills();
+
+  const overview = overviewQuery.data;
+  const supportedAppIds = useMemo(() => getSupportedAppIds(overview?.supportedApps), [overview?.supportedApps]);
+  const installedSkills = installedQuery.data ?? EMPTY_INSTALLED_SKILLS;
+  const backups = backupsQuery.data ?? EMPTY_BACKUPS;
+  const repos = reposQuery.data ?? EMPTY_REPOS;
+  const unmanagedSkills = unmanagedQuery.data ?? EMPTY_UNMANAGED_SKILLS;
+
+  const installedReady = installedQuery.data !== undefined;
+  const backupsReady = backupsQuery.data !== undefined;
+  const reposReady = reposQuery.data !== undefined;
+  const unmanagedReady = unmanagedQuery.data !== undefined;
 
   const latestBackup = useMemo(
     () => [...backups].sort((a, b) => b.createdAt - a.createdAt)[0],
     [backups]
   );
-  const latestInstalled = useMemo(
-    () => [...installedSkills].sort((a, b) => b.installedAt - a.installedAt).slice(0, 4),
-    [installedSkills]
-  );
+
   const activityItems = useMemo(() => {
+    if (!installedReady && !backupsReady) {
+      return null;
+    }
+
     const installedEvents = installedSkills.map((skill) => {
       const enabledApps = countEnabledApps(skill.apps);
 
@@ -81,6 +97,7 @@ export function OverviewPage() {
               : "Inactive",
       };
     });
+
     const backupEvents = backups.map((backup) => ({
       type: isZh ? "备份" : "Backup",
       name: backup.skill.name,
@@ -93,303 +110,415 @@ export function OverviewPage() {
     return [...installedEvents, ...backupEvents]
       .sort((a, b) => b.timestamp - a.timestamp)
       .slice(0, 6);
-  }, [backups, installedSkills, isZh]);
+  }, [backups, backupsReady, installedReady, installedSkills, isZh]);
 
-  const hostStatus = APP_IDS.map((app) => ({
-    app,
-    label: appLabels[app],
-    activeCount: installedSkills.filter((skill) => skill.apps[app]).length,
-  }));
+  const hostStatus = useMemo(
+    () =>
+      supportedAppIds.map((app) => ({
+        app,
+        label: appLabels[app],
+        activeCount: installedSkills.filter((skill) => skill.apps[app]).length,
+      })),
+    [appLabels, installedSkills, supportedAppIds]
+  );
 
-  const overviewErrorMessage =
-    overviewError instanceof Error ? overviewError.message : null;
+  const errorMessage =
+    getErrorMessage(overviewQuery.error) ??
+    getErrorMessage(installedQuery.error) ??
+    getErrorMessage(backupsQuery.error) ??
+    getErrorMessage(reposQuery.error) ??
+    getErrorMessage(unmanagedQuery.error);
+
+  const refreshingSignals =
+    overviewQuery.isFetching ||
+    installedQuery.isFetching ||
+    backupsQuery.isFetching ||
+    reposQuery.isFetching ||
+    unmanagedQuery.isFetching;
 
   return (
     <PageLayout>
-      <PageIntro
-        eyebrow={t("总览", "Overview")}
-        title={t("Skill Studio 控制台", "Skill Studio command center")}
+      <WorkbenchOverview
+        eyebrow={t("概览", "Overview")}
+        title={t("工作台总览", "Workbench overview")}
         description={t(
-          "这是一个面向桌面程序的总览入口：看当前工作区状态、支持的宿主应用、最近活动，并快速跳到已安装技能、来源、备份与设置工作台。",
-          "This dashboard is the desktop entry point for workspace health, supported hosts, recent activity, and fast jumps into installed skills, sources, backups, and settings workbenches."
+          "先看到要做什么，再补充必要的状态和运行信息。",
+          "Show what to do first, then layer in the essential status and runtime context."
         )}
-        aside={
+        stats={
           <>
-            <StatCard
-              icon={Sparkles}
+            <OverviewMetricCard
               label={t("已安装", "Installed")}
-              value={String(installedSkills.length)}
-              helper={t("受管技能总数", "Managed skills")}
+              value={installedReady ? String(installedSkills.length) : "—"}
+              helper={t("受管技能", "Managed")}
               tone="emerald"
             />
-            <StatCard
-              icon={Boxes}
-              label={t("来源", "Sources")}
-              value={String(repos.length)}
-              helper={t("已连接仓库", "Connected repositories")}
-              tone="blue"
-            />
-            <StatCard
-              icon={Archive}
-              label={t("备份", "Backups")}
-              value={String(backups.length)}
-              helper={t("本地恢复点", "Local restore points")}
+            <OverviewMetricCard
+              label={t("待导入", "Candidates")}
+              value={unmanagedReady ? String(unmanagedSkills.length) : "—"}
+              helper={t("待处理目录", "Pending")}
               tone="amber"
+            />
+            <OverviewMetricCard
+              label={t("仓库", "Repos")}
+              value={reposReady ? String(repos.length) : "—"}
+              helper={t("受管来源", "Sources")}
+              tone="blue"
             />
           </>
         }
         actions={
-          <>
-            <Badge tone="emerald">{t("固定壳层", "Fixed shell")}</Badge>
-            <Badge tone="blue">{t("分页工作台", "Workbench pages")}</Badge>
-            <Badge tone="violet">
-              {t("支持 5 个宿主应用", "Supports 5 host apps")}
-            </Badge>
-          </>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {overview ? (
+              <Badge tone="slate">
+                {t("运行中", "Running")} · {overview.appName} {overview.version}
+              </Badge>
+            ) : null}
+            {refreshingSignals ? (
+              <QueryHint tone="blue">{t("正在刷新概览", "Refreshing overview")}</QueryHint>
+            ) : null}
+          </div>
         }
       />
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_360px]">
-        <div className="space-y-7">
+      {errorMessage ? <InlineAlert tone="rose">{errorMessage}</InlineAlert> : null}
+
+      <div className="grid gap-3">
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,1.65fr)_minmax(320px,0.95fr)]">
           <Panel
-            eyebrow={t("入口", "Entry points")}
+            eyebrow={t("开始", "Launchpad")}
             title={t("核心工作流", "Core workflows")}
             description={t(
-              "Overview 只承接状态与导航，不把所有模块堆成一个长页面。真正的操作分别进入 Installed、Sources、Backups、Settings。",
-              "Overview stays focused on status and navigation. Real work happens in Installed, Sources, Backups, and Settings instead of a single scrolling page."
+              "保留最常用的 3 条路径，环境信息降为辅助入口。",
+              "Keep the three most-used routes here and demote environment info to a utility entry."
             )}
+            action={
+              <Link
+                to="/settings"
+                className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[11px] font-medium text-slate-600 transition hover:border-slate-300 hover:bg-white hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-950/80 dark:hover:text-slate-100"
+              >
+                <FolderCog className="h-3.5 w-3.5" />
+                {t("环境信息", "Environment")}
+              </Link>
+            }
+            density="compact"
           >
-            <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-4">
-              <ActionTile
+            <div className="grid gap-2 xl:grid-cols-3">
+              <OverviewActionCard
                 to="/skills"
                 icon={Sparkles}
-                title={t("已安装技能", "Installed skills")}
+                title={t("技能管理", "Skills")}
+                eyebrow={t("Inventory", "Inventory")}
                 description={t(
-                  "进入主工作台，搜索、筛选并管理启用状态。",
-                  "Open the main workbench to search, filter, and manage activation state."
+                  "查看已安装技能、启用范围和卸载路径。",
+                  "Inspect installed skills, activation coverage, and uninstall flow."
                 )}
-                meta={t("高频", "Primary")}
+                helper={t(
+                  installedSkills.length > 0 ? `当前 ${installedSkills.length} 个受管技能` : "从这里整理现有工作区",
+                  installedSkills.length > 0 ? `${installedSkills.length} managed skills right now` : "Best place to organize the current workspace"
+                )}
+                cta={t("进入工作台", "Open workbench")}
                 tone="emerald"
               />
-              <ActionTile
+              <OverviewActionCard
                 to="/sources"
                 icon={HardDriveDownload}
                 title={t("来源管理", "Sources")}
+                eyebrow={t("Intake", "Intake")}
                 description={t(
-                  "配置仓库、查看发现列表，并维护导入入口。",
-                  "Configure repositories, inspect discovery, and maintain import sources."
+                  "处理待导入项、仓库发现和 ZIP 安装入口。",
+                  "Process import candidates, repository discovery, and ZIP intake."
                 )}
-                meta={t("仓库", "Repos")}
+                helper={t(
+                  unmanagedSkills.length > 0 ? `${unmanagedSkills.length} 个目录待处理` : "仓库与导入入口集中在这里",
+                  unmanagedSkills.length > 0 ? `${unmanagedSkills.length} directories waiting` : "Repository and import entry points live here"
+                )}
+                cta={t("处理来源", "Review sources")}
                 tone="blue"
               />
-              <ActionTile
+              <OverviewActionCard
                 to="/backups"
                 icon={Archive}
                 title={t("备份与恢复", "Backups")}
+                eyebrow={t("Safety", "Safety")}
                 description={t(
-                  "查看本地恢复点，按目标应用执行恢复。",
-                  "Review local restore points and restore into the selected host app."
+                  "查看最近恢复点，必要时快速回滚。",
+                  "Inspect restore points and roll back when needed."
                 )}
-                meta={t("安全", "Safety")}
+                helper={t(
+                  latestBackup ? `最新备份：${latestBackup.skill.name}` : "当前还没有本地恢复点",
+                  latestBackup ? `Latest backup: ${latestBackup.skill.name}` : "No local restore points yet"
+                )}
+                cta={t("查看恢复点", "Open backups")}
                 tone="amber"
               />
-              <ActionTile
-                to="/settings"
-                icon={FolderCog}
-                title={t("环境设置", "Settings")}
-                description={t(
-                  "检查工作区、同步模式、宿主支持与诊断信息。",
-                  "Inspect workspace defaults, sync modes, host support, and diagnostics."
-                )}
-                meta={t("环境", "Environment")}
-                tone="violet"
-              />
             </div>
-          </Panel>
-
-          <Panel
-            eyebrow={t("动态", "Activity")}
-            title={t("最近活动", "Recent activity")}
-            description={t(
-              "这里仅展示真实状态：最新安装、最新备份以及当前还未纳入管理的本地技能。",
-              "This panel shows real state only: recent installs, recent backups, and local skills that are still unmanaged."
-            )}
-          >
-            {activityItems.length === 0 ? (
-              <EmptyPanel
-                title={t("还没有最近活动", "No recent activity yet")}
-                description={t(
-                  "安装一个技能、导入本地目录或创建备份后，这里会显示新的时间线记录。",
-                  "Install a skill, import a local directory, or create a backup to populate this activity timeline."
-                )}
-              />
-            ) : (
-              <div className="space-y-3">
-                {activityItems.map((item) => (
-                  <div
-                    key={`${item.type}-${item.name}-${item.timestamp}`}
-                    className={`${listItemClassName} bg-slate-50 dark:bg-slate-900/70`}
-                  >
-                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Badge tone={item.tone}>{item.type}</Badge>
-                            <div className="text-base font-semibold text-slate-900 dark:text-slate-100">{item.name}</div>
-                          </div>
-                          <div className="mt-2 break-all text-sm text-slate-500 dark:text-slate-400">{item.subtitle}</div>
-                        </div>
-                        <div className="text-right text-sm text-slate-500 dark:text-slate-400">
-                          <div>{formatUnixTime(item.timestamp, locale)}</div>
-                          <div className="mt-2 text-xs text-slate-400 dark:text-slate-500">{item.meta}</div>
-                        </div>
-                      </div>
-                    </div>
-                ))}
-              </div>
-            )}
-          </Panel>
-
-          <Panel
-            eyebrow={t("宿主应用", "Hosts")}
-            title={t("宿主启用覆盖面", "Host activation surface")}
-            description={t(
-              "展示每个宿主应用当前已启用的技能数量。这里不伪造性能图，只用真实启用状态构成桌面概览。",
-              "Each host card reflects how many skills are currently enabled there. No fake analytics, just real activation state."
-            )}
-          >
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {hostStatus.map((host) => (
-                <div key={host.app} className={listItemClassName}>
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <div className="text-sm font-medium text-slate-900 dark:text-slate-100">{host.label}</div>
-                      <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                        {t("已启用技能", "Enabled skills")}
-                      </div>
-                    </div>
-                    <div className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-                      {host.activeCount}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Panel>
-        </div>
-
-        <div className="space-y-7">
-          <Panel
-            eyebrow={t("工作区", "Workspace")}
-            title={t("环境快照", "Environment snapshot")}
-            description={t(
-              "直接读取 Tauri overview 命令，展示当前工作区、版本、同步模式与已检测到的宿主应用。",
-              "Backed by the real Tauri overview command for workspace root, version, sync modes, and detected host apps."
-            )}
-          >
-            {overviewLoading ? (
-              <EmptyPanel
-                title={t("正在加载环境信息", "Loading environment snapshot")}
-                description={t(
-                  "正在向 Tauri 后端请求应用概览。",
-                  "Requesting application overview from the Tauri backend."
-                )}
-              />
-            ) : overviewErrorMessage ? (
-                <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/12 dark:text-rose-100">
-                  {overviewErrorMessage}
-                </div>
-            ) : overview ? (
-              <KeyValueList
-                items={[
-                  {
-                    label: t("应用", "Application"),
-                    value: `${overview.appName} ${overview.version}`,
-                  },
-                  {
-                    label: t("工作区", "Workspace"),
-                    value: overview.workspaceRoot,
-                    mono: true,
-                  },
-                  {
-                    label: t("同步模式", "Sync modes"),
-                    value: overview.syncModes.join(", "),
-                  },
-                  {
-                    label: t("宿主应用", "Supported hosts"),
-                    value: overview.supportedApps.join(", "),
-                  },
-                ]}
-              />
-            ) : null}
           </Panel>
 
           <Panel
             eyebrow={t("状态", "Signals")}
-            title={t("当前状态信号", "Current status signals")}
-            description={t(
-              "用简洁卡片表达当前工作区的健康度与下一步动作，而不是堆一整页说明文案。",
-              "Use compact signals for workspace health and next steps instead of another scrolling wall of copy."
-            )}
+            title={t("当前重点", "Current focus")}
+            density="compact"
           >
-            <KeyValueList
-              items={[
-                {
-                  label: t("最新备份", "Latest backup"),
-                  value: latestBackup
-                    ? `${latestBackup.skill.name} · ${formatUnixTime(latestBackup.createdAt, locale)}`
-                    : t("暂无备份", "No backups yet"),
-                },
-                {
-                  label: t("未托管技能", "Unmanaged skills"),
-                  value:
+            {!installedReady || !backupsReady || !reposReady || !unmanagedReady ? (
+              <SectionSkeleton rows={3} compact />
+            ) : (
+              <div className="grid gap-2.5">
+                <OverviewSignalCard
+                  label={t("下一步", "Next step")}
+                  value={
+                    unmanagedSkills.length > 0
+                      ? t("先进入 Sources 处理待导入项", "Open Sources and process import candidates")
+                      : installedSkills.length === 0
+                        ? t("先安装或导入第一个技能", "Install or import the first skill")
+                        : t("进入 Skills 调整启用范围", "Open Skills and tune activation coverage")
+                  }
+                  hint={
+                    unmanagedSkills.length > 0
+                      ? t("当前最值得优先处理的积压项。", "The highest-value backlog item right now.")
+                      : t("当前工作区已经可以继续推进。", "The current workspace is ready for the next pass.")
+                  }
+                  tone="blue"
+                />
+                <OverviewSignalCard
+                  label={t("未托管技能", "Unmanaged skills")}
+                  value={
                     unmanagedSkills.length > 0
                       ? t(`${unmanagedSkills.length} 个待导入候选`, `${unmanagedSkills.length} import candidates`)
-                      : t("没有待导入项", "No import candidates"),
-                },
-                {
-                  label: t("最新安装", "Latest install"),
-                  value:
-                    latestInstalled[0]
-                      ? `${latestInstalled[0].name} · ${formatUnixTime(latestInstalled[0].installedAt, locale)}`
-                      : t("尚未安装任何技能", "No skills installed yet"),
-                },
-                {
-                  label: t("整体状态", "Overall state"),
-                  value:
-                    installedSkills.length > 0 || repos.length > 0 || backups.length > 0
-                      ? t("可继续操作", "Ready for workflows")
-                      : t("等待首个工作流", "Waiting for first workflow"),
-                },
-              ]}
-            />
-          </Panel>
-
-          <Panel
-            eyebrow={t("清单", "Coverage")}
-            title={t("真实覆盖面", "Real coverage")}
-            description={t(
-              "Summary 只使用当前仓库可用的真实数据源，不引入不存在的商业指标。",
-              "These badges are based on real capabilities already exposed by the repository rather than invented SaaS metrics."
+                      : t("没有待导入项", "No import candidates")
+                  }
+                  hint={t(
+                    unmanagedSkills.length > 0 ? "这些目录还没进入受管清单。" : "当前来源侧已经比较干净。",
+                    unmanagedSkills.length > 0 ? "These directories are not yet in the managed inventory." : "The intake side is currently clean."
+                  )}
+                  tone="amber"
+                />
+                <OverviewSignalCard
+                  label={t("最近变更", "Recent change")}
+                  value={
+                    activityItems?.[0]
+                      ? `${activityItems[0].type} · ${activityItems[0].name}`
+                      : t("还没有最近变更", "No recent changes yet")
+                  }
+                  hint={
+                    activityItems?.[0]
+                      ? `${formatUnixTime(activityItems[0].timestamp, locale)} · ${activityItems[0].meta}`
+                      : t("安装、导入或备份后会在这里出现。", "Installs, imports, and backups will appear here.")
+                  }
+                  tone="violet"
+                />
+              </div>
             )}
-          >
-            <div className="flex flex-wrap gap-2.5">
-              <Badge tone="emerald">{t("安装 / 卸载", "Install / uninstall")}</Badge>
-              <Badge tone="blue">{t("仓库 / ZIP / 本地导入", "Repo / ZIP / local import")}</Badge>
-              <Badge tone="amber">{t("备份 / 恢复", "Backup / restore")}</Badge>
-              <Badge tone="violet">{t("按应用启用", "Per-app activation")}</Badge>
-              <Badge tone="slate">{t("诊断与工作区", "Diagnostics & workspace")}</Badge>
-            </div>
           </Panel>
         </div>
+
+        <Panel
+          eyebrow={t("宿主应用", "Hosts")}
+          title={t("宿主启用覆盖面", "Host activation surface")}
+          description={t(
+            "看清当前技能覆盖到哪些宿主，再决定是补来源还是调启用范围。",
+            "See which hosts are currently covered before deciding whether to add sources or tune activation."
+          )}
+          action={
+            <div className="flex flex-wrap items-center justify-end gap-1.5">
+              {overview ? (
+                <>
+                  <Badge tone="slate">{overview.syncModes.join(" / ")}</Badge>
+                  <Badge tone="slate">
+                    {t(`${supportedAppIds.length} 个宿主`, `${supportedAppIds.length} hosts`)}
+                  </Badge>
+                </>
+              ) : null}
+              {installedQuery.isFetching && installedReady ? (
+                <QueryHint tone="emerald">{t("正在刷新宿主覆盖", "Refreshing host coverage")}</QueryHint>
+              ) : null}
+            </div>
+          }
+          density="compact"
+        >
+          {!installedReady && installedQuery.isLoading ? (
+            <SectionSkeleton rows={2} compact />
+          ) : hostStatus.length > 0 ? (
+            <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
+              {hostStatus.map((host) => (
+                <OverviewHostCard
+                  key={host.app}
+                  label={host.label}
+                  value={host.activeCount}
+                  helper={t("已启用技能", "Enabled skills")}
+                  isActive={host.activeCount > 0}
+                />
+              ))}
+            </div>
+          ) : (
+            <InlineAlert tone="slate">{t("当前没有可用宿主信息。", "No supported host information is currently available.")}</InlineAlert>
+          )}
+        </Panel>
       </div>
     </PageLayout>
   );
 }
 
-function countEnabledApps(apps: Record<AppId, boolean>) {
-  return Object.values(apps).filter(Boolean).length;
+function OverviewActionCard({
+  to,
+  icon: Icon,
+  eyebrow,
+  title,
+  description,
+  helper,
+  cta,
+  tone,
+}: {
+  to: string;
+  icon: ComponentType<{ className?: string }>;
+  eyebrow: string;
+  title: string;
+  description: string;
+  helper: string;
+  cta: string;
+  tone: "emerald" | "blue" | "amber" | "violet";
+}) {
+  const toneClasses = {
+    emerald:
+      "border-emerald-200/80 bg-emerald-50/55 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200",
+    blue:
+      "border-blue-200/80 bg-blue-50/55 text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200",
+    amber:
+      "border-amber-200/80 bg-amber-50/55 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200",
+    violet:
+      "border-violet-200/80 bg-violet-50/55 text-violet-700 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-200",
+  } as const;
+
+  return (
+    <Link
+      to={to}
+      className="group rounded-[18px] border border-slate-200/85 bg-white/96 p-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_10px_22px_-20px_rgba(15,23,42,0.18)] dark:border-slate-700/85 dark:bg-slate-950/68 dark:hover:border-slate-600"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className={`flex h-8 w-8 items-center justify-center rounded-[0.9rem] border ${toneClasses[tone]}`}>
+          <Icon className="h-3.5 w-3.5" />
+        </div>
+        <Badge tone={tone}>{eyebrow}</Badge>
+      </div>
+
+      <div className="mt-2">
+        <div className="text-[14px] font-semibold tracking-[-0.03em] text-slate-900 dark:text-white">{title}</div>
+        <p className="mt-1 text-[11px] leading-4 text-slate-600 dark:text-slate-400">{description}</p>
+      </div>
+
+      <div className="mt-2 flex items-end justify-between gap-3 border-t border-slate-200/80 pt-2 dark:border-slate-800">
+        <div className="min-w-0 text-[10px] leading-4 text-slate-500 dark:text-slate-400">{helper}</div>
+        <div className="inline-flex shrink-0 items-center gap-1 text-[11px] font-medium text-slate-700 transition group-hover:translate-x-0.5 dark:text-slate-200">
+          {cta}
+          <ArrowRight className="h-3.5 w-3.5" />
+        </div>
+      </div>
+    </Link>
+  );
 }
 
-function formatUnixTime(value: number, locale: string) {
-  return new Date(value * 1000).toLocaleString(locale);
+function OverviewSignalCard({
+  label,
+  value,
+  hint,
+  tone,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+  tone: "blue" | "amber" | "emerald" | "violet";
+}) {
+  const toneClasses = {
+    blue: "bg-blue-500",
+    amber: "bg-amber-500",
+    emerald: "bg-emerald-500",
+    violet: "bg-violet-500",
+  } as const;
+
+  return (
+    <div className="rounded-[16px] border border-slate-200/85 bg-white/94 px-3 py-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:border-slate-700/85 dark:bg-slate-950/62">
+      <div className="flex items-center gap-2">
+        <span className={`h-2 w-2 rounded-full ${toneClasses[tone]}`} />
+        <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500 dark:text-slate-400">
+          {label}
+        </div>
+      </div>
+      <div className="mt-1.5 text-[13px] font-semibold leading-5 text-slate-900 dark:text-slate-100">{value}</div>
+      <div className="mt-1 text-[10px] leading-4 text-slate-500 dark:text-slate-400">{hint}</div>
+    </div>
+  );
+}
+
+function OverviewMetricCard({
+  label,
+  value,
+  helper,
+  tone,
+}: {
+  label: string;
+  value: string;
+  helper: string;
+  tone: "emerald" | "blue" | "amber";
+}) {
+  const toneClasses = {
+    emerald:
+      "border-emerald-200/80 bg-emerald-50/70 text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-200",
+    blue:
+      "border-blue-200/80 bg-blue-50/70 text-blue-700 dark:border-blue-500/25 dark:bg-blue-500/10 dark:text-blue-200",
+    amber:
+      "border-amber-200/80 bg-amber-50/70 text-amber-700 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-200",
+  } as const;
+
+  return (
+    <div className="inline-flex min-h-10 items-center gap-2 rounded-full border border-slate-200/85 bg-white/92 px-3 py-1.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] dark:border-slate-700/85 dark:bg-slate-950/62">
+      <div className="min-w-0">
+        <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+          {label}
+        </div>
+        <div className="mt-0.5 text-[1rem] font-semibold tracking-[-0.04em] text-slate-900 dark:text-white">
+          {value}
+        </div>
+      </div>
+      <span className={`shrink-0 rounded-full border px-2 py-1 text-[9px] font-medium leading-none ${toneClasses[tone]}`}>
+        {helper}
+      </span>
+    </div>
+  );
+}
+
+function OverviewHostCard({
+  label,
+  value,
+  helper,
+  isActive,
+}: {
+  label: string;
+  value: number;
+  helper: string;
+  isActive: boolean;
+}) {
+  return (
+    <div
+      className={[
+        `${listItemClassName} p-2.5`,
+        isActive ? "border-emerald-200/85 bg-emerald-50/45 dark:border-emerald-500/25 dark:bg-emerald-500/8" : "",
+      ].join(" ")}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-[12px] font-medium text-slate-900 dark:text-slate-100">{label}</div>
+          <div className="mt-0.5 text-[10px] text-slate-500 dark:text-slate-400">{helper}</div>
+        </div>
+        <div className="text-[1.3rem] font-semibold tracking-tight text-slate-900 dark:text-slate-100">{value}</div>
+      </div>
+      <div className="mt-2.5 h-1.5 rounded-full bg-slate-100 dark:bg-slate-800">
+        <div
+          className={[
+            "h-full rounded-full transition-all",
+            isActive ? "w-[68%] bg-emerald-500 dark:bg-emerald-400" : "w-[14%] bg-slate-300 dark:bg-slate-600",
+          ].join(" ")}
+        />
+      </div>
+    </div>
+  );
 }

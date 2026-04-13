@@ -25,8 +25,10 @@ dist-ssr
 
 # AI Assistant Directories
 .agent/
+.agents/
 .claude/
 .codex/
+.codex-artifacts/
 .snow/
 .codebuddy/
 .continue/
@@ -34,6 +36,7 @@ dist-ssr
 .gemini/
 .kiro/
 .opencode/
+.playwright-mcp/
 .qoder/
 .roo/
 .trae/
