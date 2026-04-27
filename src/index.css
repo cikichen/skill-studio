@@ -7,8 +7,18 @@
   --color-background: #fafbfc;
   --color-surface: #ffffff;
   --color-text: #0f172a;
+  --color-text-muted: #526277;
+  --color-border: rgba(15, 23, 42, 0.08);
+  --color-border-strong: rgba(15, 23, 42, 0.12);
+  --color-surface-strong: #ffffff;
+  --color-surface-subtle: #f5f7fa;
+  --shadow-soft: 0 1px 2px rgba(15, 23, 42, 0.05), 0 10px 24px -24px rgba(15, 23, 42, 0.18);
+  --shadow-panel: 0 12px 30px -26px rgba(15, 23, 42, 0.22);
+  --shadow-focus: 0 0 0 4px rgba(59, 130, 246, 0.12);
+  --scrollbar-thumb: rgba(100, 116, 139, 0.28);
+  --scrollbar-thumb-hover: rgba(71, 85, 105, 0.42);
 
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: "SF Pro Display", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   line-height: 1.5;
   font-weight: 400;
   font-synthesis: none;
@@ -17,8 +27,26 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+html.dark {
+  --color-background: #1d232a;
+  --color-surface: #242c35;
+  --color-surface-strong: #2a313b;
+  --color-surface-subtle: #20272f;
+  --color-text: #f8fafc;
+  --color-text-muted: #94a3b8;
+  --color-border: rgba(148, 163, 184, 0.14);
+  --color-border-strong: rgba(148, 163, 184, 0.2);
+  --shadow-soft: 0 1px 2px rgba(2, 6, 23, 0.28), 0 12px 24px -24px rgba(2, 6, 23, 0.55);
+  --shadow-panel: 0 18px 36px -28px rgba(2, 6, 23, 0.62);
+  --shadow-focus: 0 0 0 4px rgba(96, 165, 250, 0.14);
+  --scrollbar-thumb: rgba(148, 163, 184, 0.2);
+  --scrollbar-thumb-hover: rgba(148, 163, 184, 0.34);
+}
+
 * {
   box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
 }
 
 html,
@@ -30,27 +58,32 @@ body,
 }
 
 html {
-  color-scheme: dark;
-  background: #1d232a;
+  color-scheme: light;
+  background: var(--color-background);
   overscroll-behavior: none;
 }
 
+html.dark {
+  color-scheme: dark;
+}
+
 body {
-  background: #1d232a;
-  color: #e2e8f0;
+  position: relative;
+  background-color: var(--color-background);
+  color: var(--color-text);
   min-height: 100vh;
   overflow: hidden;
 }
 
-::selection {
-  background-color: rgba(59, 130, 246, 0.24);
-  color: #eff6ff;
+html.dark body,
+body.dark {
+  background-color: var(--color-background);
+  color: var(--color-text);
 }
 
-.dark body,
-body.dark {
-  background: #1d232a;
-  color: #F8FAFC;
+body::before,
+body::after {
+  content: none;
 }
 
 button,
@@ -62,6 +95,13 @@ select {
 
 button {
   cursor: pointer;
+  letter-spacing: 0.01em;
+}
+
+input,
+textarea,
+select {
+  letter-spacing: 0.01em;
 }
 
 img {
@@ -73,31 +113,26 @@ svg {
   display: block;
 }
 
-/* Smooth transitions for interactive elements */
-.transition-smooth {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Bold hover effect - design system recommendation */
-.hover-bold:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 24px -18px rgba(15, 23, 42, 0.45);
-}
-
-* {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(100, 116, 139, 0.28) transparent;
+::selection {
+  background-color: rgba(59, 130, 246, 0.22);
+  color: #eff6ff;
 }
 
 *::-webkit-scrollbar {
-  width: 0px;
-  height: 0px;
+  width: 8px;
+  height: 8px;
   background: transparent;
 }
 
 *::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
   border-radius: 999px;
-  background: rgba(100, 116, 139, 0.28);
+  background-clip: padding-box;
+  background: var(--scrollbar-thumb);
+}
+
+*:hover::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb-hover);
 }
 
 *::-webkit-scrollbar-track {
@@ -113,38 +148,361 @@ svg {
   display: none;
 }
 
-/* CTA button style */
+.transition-smooth {
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.hover-bold:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-soft);
+}
+
+.desktop-shell {
+  overflow: hidden;
+}
+
+.desktop-glass-panel,
+.desktop-glass-subtle,
+.desktop-topbar,
+.desktop-main-frame,
+.desktop-control,
+.desktop-secondary-button,
+.desktop-primary-button,
+.desktop-accent-button,
+.desktop-danger-button,
+.desktop-toolbar-button,
+.desktop-nav-track,
+.desktop-list-item {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.desktop-glass-panel,
+.desktop-topbar {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-strong);
+  box-shadow: var(--shadow-panel);
+}
+
+.desktop-glass-subtle,
+.desktop-main-frame,
+.desktop-list-item {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-subtle);
+  box-shadow: var(--shadow-soft);
+}
+
+html.dark .desktop-glass-subtle,
+html.dark .desktop-main-frame,
+html.dark .desktop-list-item {
+  background: var(--color-surface-subtle);
+}
+
+.desktop-control,
+.desktop-secondary-button,
+.desktop-accent-button,
+.desktop-danger-button,
+.desktop-toolbar-button {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+
+.desktop-control:hover,
+.desktop-secondary-button:hover,
+.desktop-accent-button:hover,
+.desktop-danger-button:hover,
+.desktop-toolbar-button:hover {
+  transform: translateY(-1px);
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-subtle);
+}
+
+html.dark .desktop-control:hover,
+html.dark .desktop-secondary-button:hover,
+html.dark .desktop-accent-button:hover,
+html.dark .desktop-danger-button:hover,
+html.dark .desktop-toolbar-button:hover {
+  background: var(--color-surface-strong);
+}
+
+.desktop-control:focus,
+.desktop-secondary-button:focus-visible,
+.desktop-primary-button:focus-visible,
+.desktop-accent-button:focus-visible,
+.desktop-danger-button:focus-visible,
+.desktop-toolbar-button:focus-visible {
+  outline: none;
+  border-color: rgba(96, 165, 250, 0.4);
+  box-shadow: var(--shadow-soft), var(--shadow-focus);
+}
+
+.desktop-primary-button {
+  border: 1px solid #3b82f6;
+  background: #3b82f6;
+  box-shadow: 0 10px 24px -18px rgba(37, 99, 235, 0.46);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+
+.desktop-primary-button:hover {
+  transform: translateY(-1px);
+  border-color: #2563eb;
+  background: #2563eb;
+  box-shadow: 0 14px 28px -18px rgba(37, 99, 235, 0.5);
+}
+
+.desktop-primary-button:active,
+.desktop-secondary-button:active,
+.desktop-accent-button:active,
+.desktop-danger-button:active,
+.desktop-toolbar-button:active {
+  transform: scale(0.985);
+}
+
+.desktop-nav-track {
+  border: 1px solid var(--color-border);
+  background: #f3f4f6;
+  box-shadow: none;
+}
+
+html.dark .desktop-nav-track {
+  background: #2a313b;
+}
+
+.desktop-nav-link {
+  color: #475569;
+  transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.desktop-nav-link:hover {
+  transform: translateY(-1px);
+  background: #e5e7eb;
+  color: #0f172a;
+}
+
+.desktop-nav-link-active {
+  background: #111827;
+  color: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
+}
+
+html.dark .desktop-nav-link {
+  color: #cbd5e1;
+}
+
+html.dark .desktop-nav-link:hover {
+  background: #374151;
+  color: #fff;
+}
+
+html.dark .desktop-nav-link-active {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.desktop-toolbar-button {
+  color: var(--color-text-muted);
+}
+
+.desktop-brand-mark {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+}
+
+html.dark .desktop-glass-panel,
+html.dark .desktop-topbar {
+  background: var(--color-surface-strong);
+}
+
+html.dark .desktop-control,
+html.dark .desktop-secondary-button,
+html.dark .desktop-accent-button,
+html.dark .desktop-danger-button,
+html.dark .desktop-toolbar-button {
+  background: var(--color-surface);
+}
+
+html.dark .desktop-brand-mark {
+  background: var(--color-surface);
+}
+
+html.dark .desktop-list-item-selected {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(96, 165, 250, 0.28);
+}
+
 .btn-cta {
-  background-color: #3B82F6;
+  border: 1px solid #3b82f6;
+  background: #3b82f6;
   color: #eff6ff;
   font-weight: 600;
   padding: 0.75rem 1.5rem;
-  border-radius: 0.75rem;
-  border: 1px solid rgba(59, 130, 246, 0.28);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
-  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  border-radius: 0.9rem;
+  box-shadow: 0 10px 24px -18px rgba(37, 99, 235, 0.46);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease;
 }
 
 .btn-cta:hover {
-  background-color: #2563EB;
-  border-color: rgba(37, 99, 235, 0.32);
-  box-shadow: 0 8px 18px -14px rgba(15, 23, 42, 0.4);
+  transform: translateY(-1px);
+  background: #2563eb;
+  border-color: #2563eb;
+  box-shadow: 0 14px 28px -18px rgba(37, 99, 235, 0.5);
 }
 
 .btn-cta:active {
-  transform: scale(0.95);
+  transform: scale(0.985);
 }
 
-/* Card style with new design system */
-.card-glass {
+.skill-detail-markdown {
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+  line-height: 1.72;
+}
+
+.skill-detail-markdown > :first-child {
+  margin-top: 0;
+}
+
+.skill-detail-markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.skill-detail-markdown h1,
+.skill-detail-markdown h2,
+.skill-detail-markdown h3,
+.skill-detail-markdown h4,
+.skill-detail-markdown h5,
+.skill-detail-markdown h6 {
+  margin: 1.25rem 0 0.75rem;
+  color: var(--color-text);
+  font-weight: 600;
+  line-height: 1.28;
+}
+
+.skill-detail-markdown h1 {
+  font-size: 1.5rem;
+}
+
+.skill-detail-markdown h2 {
+  font-size: 1.25rem;
+}
+
+.skill-detail-markdown h3 {
+  font-size: 1.125rem;
+}
+
+.skill-detail-markdown p,
+.skill-detail-markdown ul,
+.skill-detail-markdown ol,
+.skill-detail-markdown blockquote,
+.skill-detail-markdown pre,
+.skill-detail-markdown table {
+  margin: 0.75rem 0;
+}
+
+.skill-detail-markdown ul,
+.skill-detail-markdown ol {
+  padding-left: 1.25rem;
+}
+
+.skill-detail-markdown li + li {
+  margin-top: 0.25rem;
+}
+
+.skill-detail-markdown a {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.skill-detail-markdown a:hover {
+  text-decoration: underline;
+}
+
+.skill-detail-markdown code {
+  border-radius: 0.45rem;
+  background: rgba(148, 163, 184, 0.16);
+  padding: 0.15rem 0.4rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.85em;
+}
+
+.skill-detail-markdown pre {
+  overflow-x: auto;
   border-radius: 1rem;
-  border: 1px solid rgba(226, 232, 240, 0.8);
-  background: #ffffff;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  background: #0f172a;
+  padding: 0.95rem 1rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
-.dark .card-glass {
-  border-color: rgba(51, 65, 85, 0.9);
-  background: #1e293b;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.28);
+.skill-detail-markdown pre code {
+  background: transparent;
+  padding: 0;
+  color: #e2e8f0;
+  font-size: 0.9em;
+}
+
+.skill-detail-markdown blockquote {
+  border-left: 3px solid rgba(59, 130, 246, 0.35);
+  padding-left: 0.875rem;
+  color: #475569;
+}
+
+.skill-detail-markdown hr {
+  margin: 1rem 0;
+  border: 0;
+  border-top: 1px solid rgba(148, 163, 184, 0.28);
+}
+
+.skill-detail-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+}
+
+.skill-detail-markdown th,
+.skill-detail-markdown td {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+  padding: 0.625rem 0.75rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.skill-detail-markdown th {
+  background: rgba(148, 163, 184, 0.12);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+html.dark .skill-detail-markdown a {
+  color: #93c5fd;
+}
+
+html.dark .skill-detail-markdown code {
+  background: rgba(71, 85, 105, 0.4);
+}
+
+html.dark .skill-detail-markdown blockquote {
+  border-left-color: rgba(96, 165, 250, 0.45);
+  color: #94a3b8;
+}
+
+html.dark .skill-detail-markdown hr {
+  border-top-color: rgba(71, 85, 105, 0.7);
+}
+
+html.dark .skill-detail-markdown table {
+  border-color: rgba(71, 85, 105, 0.7);
+}
+
+html.dark .skill-detail-markdown th,
+html.dark .skill-detail-markdown td {
+  border-bottom-color: rgba(71, 85, 105, 0.55);
+}
+
+html.dark .skill-detail-markdown th {
+  background: rgba(51, 65, 85, 0.65);
 }

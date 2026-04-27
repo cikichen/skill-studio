@@ -27,7 +27,7 @@ import type {
   UnmanagedSkill,
 } from "../../shared/types/skills";
 import { isKnownAppId } from "../../shared/types/skills";
-import { useSupportedAppIds } from "../../shared/lib/tauri";
+import { useInstalledAppIds } from "../../shared/lib/tauri";
 import {
   Badge,
   EmptyPanel,
@@ -36,30 +36,30 @@ import {
   Panel,
   QueryHint,
   SectionSkeleton,
-  StatCard,
-  WorkbenchHeroActions,
-  WorkbenchOverview,
   dangerButtonClassName,
   inputClassName,
   primaryButtonClassName,
   secondaryButtonClassName,
-  workbenchActionDockClassName,
   workbenchDetailFieldClassName,
   workbenchDetailPanelClassName,
-  workbenchHeaderCardClassName,
   workbenchListItemClassName,
   workbenchMarkdownPanelClassName,
   workbenchSectionClassName,
   workbenchSegmentTriggerClassName,
   workbenchSelectedSurfaceClassName,
   workbenchSegmentedTrackClassName,
-  workbenchToggleBaseClassName,
 } from "../../shared/components/workbench-ui";
 
 const toolbarShellClassName = workbenchSegmentedTrackClassName;
 const toolbarChipBaseClassName = workbenchSegmentTriggerClassName;
 const activeSurfaceClassName = workbenchSelectedSurfaceClassName;
 const activeToggleClassName = workbenchSelectedSurfaceClassName;
+const compactActionDockClassName =
+  "rounded-[12px] border border-slate-200/80 bg-white/92 px-2 py-1.5 shadow-[0_8px_24px_-20px_rgba(15,23,42,0.28)] backdrop-blur dark:border-slate-700/80 dark:bg-slate-950/86";
+const compactSecondaryButtonClassName =
+  "inline-flex h-6.5 items-center justify-center gap-1 rounded-full border border-slate-200 bg-white px-2 text-[11px] font-medium leading-none text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-600 dark:bg-[#242c35] dark:text-slate-300 dark:hover:border-slate-500 dark:hover:bg-[#2a313b] dark:hover:text-white";
+const compactPrimaryButtonClassName =
+  "inline-flex h-6.5 items-center justify-center gap-1 rounded-full border border-slate-900 bg-slate-900 px-2 text-[11px] font-semibold leading-none text-white transition hover:border-slate-800 hover:bg-black disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white";
 const drawerSurfaceClassName =
   "flex h-full w-full max-w-[460px] flex-col border-l border-slate-200/85 bg-white shadow-[0_18px_40px_-28px_rgba(15,23,42,0.28)] dark:border-slate-700/85 dark:bg-slate-950/84 dark:shadow-[0_18px_40px_-28px_rgba(2,6,23,0.8)]";
 const INITIAL_VISIBLE_COUNT = 80;
@@ -92,7 +92,7 @@ export function SourcesPage() {
   const t = useCallback((zh: string, en: string) => (isZh ? zh : en), [isZh]);
 
   const reposQuery = useSkillRepos();
-  const supportedAppsQuery = useSupportedAppIds();
+  const installedAppsQuery = useInstalledAppIds();
   const discoverableQuery = useDiscoverableSkills();
   const unmanagedQuery = useUnmanagedSkills();
   const addRepoMutation = useAddSkillRepo();
@@ -123,7 +123,7 @@ export function SourcesPage() {
   const repos = reposQuery.data ?? EMPTY_REPOS;
   const discoverableSkills = discoverableQuery.data ?? EMPTY_DISCOVERABLE_SKILLS;
   const unmanagedSkills = unmanagedQuery.data ?? EMPTY_UNMANAGED_SKILLS;
-  const supportedAppIds = supportedAppsQuery.data ?? EMPTY_SUPPORTED_APP_IDS;
+  const supportedAppIds = installedAppsQuery.data ?? EMPTY_SUPPORTED_APP_IDS;
   const reposReady = reposQuery.data !== undefined;
   const discoverableReady = discoverableQuery.data !== undefined;
   const unmanagedReady = unmanagedQuery.data !== undefined;
@@ -239,7 +239,7 @@ export function SourcesPage() {
     getErrorMessage(reposQuery.error) ??
     getErrorMessage(discoverableQuery.error) ??
     getErrorMessage(unmanagedQuery.error) ??
-    getErrorMessage(supportedAppsQuery.error) ??
+    getErrorMessage(installedAppsQuery.error) ??
     getErrorMessage(selectedDetailQuery.error);
 
   const handleLoadMore = useCallback(() => {
@@ -441,64 +441,25 @@ export function SourcesPage() {
       {errorMessage ? <InlineAlert tone="rose">{errorMessage}</InlineAlert> : null}
       {successMessage ? <InlineAlert tone="emerald" className="rounded-[18px] px-3.5 py-3">{successMessage}</InlineAlert> : null}
 
-      <WorkbenchOverview
-        eyebrow={t("来源", "Sources")}
-        title={t("来源工作台", "Source workbench")}
-        description={t(
-          "在左侧筛选来源技能，右侧直接阅读 README，并把安装或导入动作压缩成底部一条连续流程。",
-          "Filter source skills on the left, read the README directly on the right, and keep install or import as one continuous dock at the bottom."
-        )}
-        stats={
-          <>
-            <StatCard
-              label={t("可发现", "Discoverable")}
-              value={discoverableReady ? String(discoverableSkills.length) : "—"}
-              helper={t("来自受管仓库", "From managed repositories")}
-              tone="violet"
-            />
-            <StatCard
-              label={t("未托管", "Unmanaged")}
-              value={unmanagedReady ? String(unmanagedSkills.length) : "—"}
-              helper={t("可直接纳入管理", "Ready to import")}
-              tone="amber"
-            />
-            <StatCard
-              label={t("当前结果", "Visible")}
-              value={String(visibleEntries.length)}
-              helper={t("随筛选与搜索变化", "Changes with filters and search")}
-              tone="blue"
-            />
-          </>
-        }
-        actions={
-          <WorkbenchHeroActions className="border-none bg-transparent p-0 dark:bg-transparent">
-            <button
-              type="button"
-              onClick={() => setIsZipToolsOpen((current) => !current)}
-              className={secondaryButtonClassName}
-            >
-              <Archive className="h-3.5 w-3.5" />
-              {isZipToolsOpen ? t("收起 ZIP 安装", "Hide ZIP install") : t("ZIP 安装", "ZIP install")}
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsRepoManagerOpen(true)}
-              className={secondaryButtonClassName}
-            >
-              <GitBranchPlus className="h-3.5 w-3.5" />
-              {t("管理仓库", "Manage repos")}
-            </button>
-            {discoverableQuery.isFetching || unmanagedQuery.isFetching ? (
-              <QueryHint tone="slate">{t("刷新中", "Refreshing")}</QueryHint>
-            ) : null}
-          </WorkbenchHeroActions>
-        }
-      />
-
       <div className="grid min-h-0 flex-1 gap-3 overflow-hidden xl:grid-cols-[minmax(280px,0.78fr)_minmax(0,1.82fr)] 2xl:grid-cols-[minmax(300px,0.74fr)_minmax(0,1.9fr)]">
         <Panel
           eyebrow={t("浏览器", "Browser")}
           title={t("来源目录", "Source catalog")}
+          action={
+            <div className="flex flex-wrap items-center justify-end gap-1.5">
+              <Badge tone="slate">{discoverableReady && unmanagedReady ? visibleEntries.length : "—"}</Badge>
+              <Badge tone="slate">
+                {activeFilter === "all"
+                  ? t("全部来源", "All sources")
+                  : activeFilter === "discoverable"
+                    ? t("可发现", "Discoverable")
+                    : t("未托管", "Unmanaged")}
+              </Badge>
+              {discoverableQuery.isFetching || unmanagedQuery.isFetching ? (
+                <QueryHint tone="slate">{t("刷新中", "Refreshing")}</QueryHint>
+              ) : null}
+            </div>
+          }
           density="compact"
           className="flex h-full min-h-0 flex-col overflow-hidden"
         >
@@ -542,6 +503,25 @@ export function SourcesPage() {
                   <QueryHint tone="slate">{t("正在筛选…", "Filtering…")}</QueryHint>
                 </div>
               ) : null}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5 px-1">
+              <button
+                type="button"
+                onClick={() => setIsZipToolsOpen((current) => !current)}
+                className={compactSecondaryButtonClassName}
+              >
+                <Archive className="h-3 w-3" />
+                {isZipToolsOpen ? t("收起 ZIP", "Hide ZIP") : t("ZIP 安装", "ZIP install")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsRepoManagerOpen(true)}
+                className={compactSecondaryButtonClassName}
+              >
+                <GitBranchPlus className="h-3 w-3" />
+                {t("管理仓库", "Manage repos")}
+              </button>
             </div>
 
             {isZipToolsOpen ? (
@@ -596,58 +576,61 @@ export function SourcesPage() {
               )}
             />
           ) : (
-            <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
-              <div className={workbenchHeaderCardClassName}>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <Badge tone={selectedEntry.kind === "discoverable" ? "violet" : "amber"}>
-                      {selectedEntry.kind === "discoverable" ? t("可安装", "Installable") : t("可导入", "Importable")}
-                    </Badge>
-                    <Badge tone="slate">{selectedEntry.sourceLabel}</Badge>
-                    <Badge tone="blue">{selectedEntry.meta}</Badge>
-                  </div>
-                  <div className="mt-2 text-[15px] font-semibold tracking-[-0.04em] text-slate-900 dark:text-white">
-                    {selectedEntry.name}
-                  </div>
-                  <div className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{selectedEntry.summary}</div>
-                  {selectedEntry.description ? (
-                    <p className="mt-2.5 max-w-3xl text-[13px] leading-5 text-slate-600 dark:text-slate-300">
-                      {selectedEntry.description}
-                    </p>
-                  ) : null}
+            <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-hidden">
+              <div className="rounded-[14px] border border-slate-200/80 bg-slate-50/85 px-3 py-2 dark:border-slate-700/80 dark:bg-slate-900/70">
+                <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                  <Badge tone={selectedEntry.kind === "discoverable" ? "violet" : "amber"}>
+                    {selectedEntry.kind === "discoverable" ? t("安装", "Install") : t("导入", "Import")}
+                  </Badge>
+                  <span className="font-medium text-slate-600 dark:text-slate-300">{selectedEntry.sourceLabel}</span>
+                  <span className="text-slate-300 dark:text-slate-600">•</span>
+                  <span>{selectedEntry.meta}</span>
                 </div>
+                {!((selectedDetail && "readmeContent" in selectedDetail && selectedDetail.readmeContent) ?? false) && selectedEntry.description ? (
+                  <p className="mt-1.5 pr-28 text-[12px] leading-5 text-slate-500 dark:text-slate-400 xl:pr-44">
+                    {selectedEntry.description}
+                  </p>
+                ) : null}
               </div>
 
-              <div className={`${workbenchDetailPanelClassName} min-h-0 flex-1`}>
-                <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-4 py-4">
+              <div className={`${workbenchDetailPanelClassName} relative min-h-0 flex-1`}>
+                {selectedEntry.kind === "discoverable" && selectedEntry.discoverableSkill ? (
+                  <div className="pointer-events-none absolute right-3 top-3 z-10">
+                    <div className="pointer-events-auto max-w-[42vw] xl:max-w-[34vw]">
+                      <DiscoverableSourceActions
+                        skill={selectedEntry.discoverableSkill}
+                        currentApp={effectiveCurrentApp}
+                        supportedAppIds={supportedAppIds}
+                        appLabels={appLabels}
+                        pendingInstallKey={pendingInstallKey}
+                        onSelectApp={setCurrentApp}
+                        onInstall={handleInstall}
+                        isZh={isZh}
+                      />
+                    </div>
+                  </div>
+                ) : selectedEntry.unmanagedSkill ? (
+                  <div className="pointer-events-none absolute right-3 top-3 z-10">
+                    <div className="pointer-events-auto max-w-[44vw] xl:max-w-[36vw]">
+                      <UnmanagedSourceActions
+                        skill={selectedEntry.unmanagedSkill}
+                        currentApp={effectiveCurrentApp}
+                        supportedAppIds={supportedAppIds}
+                        appLabels={appLabels}
+                        importSelections={importSelections}
+                        pendingImportDirectory={pendingImportDirectory}
+                        onToggle={handleImportAppToggle}
+                        onImport={handleImport}
+                        isZh={isZh}
+                      />
+                    </div>
+                  </div>
+                ) : null}
+
+                <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-16 xl:pt-18">
                   <SkillDetailContent detail={selectedDetail} appLabels={appLabels} isZh={isZh} />
                 </div>
               </div>
-
-              {selectedEntry.kind === "discoverable" && selectedEntry.discoverableSkill ? (
-                <DiscoverableSourceActions
-                  skill={selectedEntry.discoverableSkill}
-                  currentApp={effectiveCurrentApp}
-                  supportedAppIds={supportedAppIds}
-                  appLabels={appLabels}
-                  pendingInstallKey={pendingInstallKey}
-                  onSelectApp={setCurrentApp}
-                  onInstall={handleInstall}
-                  isZh={isZh}
-                />
-              ) : selectedEntry.unmanagedSkill ? (
-                <UnmanagedSourceActions
-                  skill={selectedEntry.unmanagedSkill}
-                  currentApp={effectiveCurrentApp}
-                  supportedAppIds={supportedAppIds}
-                  appLabels={appLabels}
-                  importSelections={importSelections}
-                  pendingImportDirectory={pendingImportDirectory}
-                  onToggle={handleImportAppToggle}
-                  onImport={handleImport}
-                  isZh={isZh}
-                />
-              ) : null}
             </div>
           )}
         </Panel>
@@ -801,55 +784,43 @@ function DiscoverableSourceActions({
   const hasSupportedApps = supportedAppIds.length > 0;
 
   return (
-    <div className={workbenchActionDockClassName}>
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-        <div className="min-w-0 flex-1">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-            {isZh ? "安装流程" : "Install workflow"}
-          </div>
-          <p className="mt-1.5 max-w-2xl text-[13px] leading-5 text-slate-600 dark:text-slate-300">
-            {isZh
-              ? `先确认目标应用，再把 ${skill.name} 直接装入当前工作区。`
-              : `Confirm the target app, then install ${skill.name} straight into the current workspace.`}
-          </p>
+    <div className={compactActionDockClassName}>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+          {isZh ? "安装到" : "Install to"}
         </div>
+        {hasSupportedApps ? (
+          <div className="flex flex-wrap gap-1.5">
+            {supportedAppIds.map((app) => (
+              <button
+                key={app}
+                type="button"
+                onClick={() => onSelectApp(app)}
+                disabled={pendingInstallKey === skill.key}
+                className={[compactSecondaryButtonClassName, currentApp === app ? activeToggleClassName : ""].join(" ")}
+              >
+                {appLabels[app]}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <InlineAlert tone="slate">
+            {isZh ? "未检测到可用宿主，暂时无法安装。" : "No available hosts were detected, so installation is temporarily unavailable."}
+          </InlineAlert>
+        )}
         <button
           type="button"
           onClick={() => onInstall(skill)}
           disabled={pendingInstallKey === skill.key || !currentApp}
-          className={primaryButtonClassName}
+          className={compactPrimaryButtonClassName}
         >
           {pendingInstallKey === skill.key
             ? (isZh ? "安装中…" : "Installing…")
-            : currentApp
-              ? isZh
-                ? `安装到 ${appLabels[currentApp]}`
-                : `Install to ${appLabels[currentApp]}`
-              : isZh
-                ? "暂无可用宿主"
-                : "No supported host"}
+            : isZh
+              ? "安装"
+              : "Install"}
         </button>
       </div>
-
-      {hasSupportedApps ? (
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {supportedAppIds.map((app) => (
-            <button
-              key={app}
-              type="button"
-              onClick={() => onSelectApp(app)}
-              disabled={pendingInstallKey === skill.key}
-              className={[workbenchToggleBaseClassName, currentApp === app ? activeToggleClassName : ""].join(" ")}
-            >
-              {appLabels[app]}
-            </button>
-          ))}
-        </div>
-      ) : (
-        <InlineAlert tone="slate" className="mt-3">
-          {isZh ? "当前没有可用宿主，暂时无法安装。" : "No supported hosts are available right now, so installation is temporarily unavailable."}
-        </InlineAlert>
-      )}
     </div>
   );
 }
@@ -881,50 +852,42 @@ function UnmanagedSourceActions({
   const hasSupportedApps = supportedAppIds.length > 0;
 
   return (
-    <div className={workbenchActionDockClassName}>
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-        <div className="min-w-0 flex-1">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-            {isZh ? "导入流程" : "Import workflow"}
-          </div>
-          <p className="mt-1.5 max-w-2xl text-[13px] leading-5 text-slate-600 dark:text-slate-300">
-            {isZh
-              ? "把当前目录纳入管理，并按需同步到目标应用。"
-              : "Bring this directory under management and sync it to the target apps you want."}
-          </p>
+    <div className={compactActionDockClassName}>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+          {isZh ? "同步到" : "Sync to"}
         </div>
+        {hasSupportedApps ? (
+          <div className="flex flex-wrap gap-1.5">
+            {supportedAppIds.map((app) => {
+              const enabled = selectedApps[app];
+              return (
+                <button
+                  key={app}
+                  type="button"
+                  onClick={() => onToggle(skill.directory, app, !enabled)}
+                  disabled={isPending}
+                  className={[compactSecondaryButtonClassName, enabled ? activeToggleClassName : ""].join(" ")}
+                >
+                  {appLabels[app]}
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <InlineAlert tone="slate">
+            {isZh ? "未检测到可用宿主，暂时无法导入。" : "No available hosts were detected, so import is temporarily unavailable."}
+          </InlineAlert>
+        )}
         <button
           type="button"
           onClick={() => onImport(skill)}
           disabled={isPending || !hasSupportedApps}
-          className={primaryButtonClassName}
+          className={compactPrimaryButtonClassName}
         >
-          {isPending ? (isZh ? "导入中…" : "Importing…") : isZh ? `导入到 ${enabledCount} 个应用` : `Import to ${enabledCount} apps`}
+          {isPending ? (isZh ? "导入中…" : "Importing…") : isZh ? `导入 ${enabledCount}` : `Import ${enabledCount}`}
         </button>
       </div>
-
-      {hasSupportedApps ? (
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {supportedAppIds.map((app) => {
-            const enabled = selectedApps[app];
-            return (
-              <button
-                key={app}
-                type="button"
-                onClick={() => onToggle(skill.directory, app, !enabled)}
-                disabled={isPending}
-                className={[workbenchToggleBaseClassName, enabled ? activeToggleClassName : ""].join(" ")}
-              >
-                {appLabels[app]}
-              </button>
-            );
-          })}
-        </div>
-      ) : (
-        <InlineAlert tone="slate" className="mt-3">
-          {isZh ? "当前没有可用宿主，暂时无法导入。" : "No supported hosts are available right now, so import is temporarily unavailable."}
-        </InlineAlert>
-      )}
     </div>
   );
 }
@@ -953,40 +916,11 @@ function ZipInstallPanel({
   isZh: boolean;
 }) {
   return (
-    <div className={workbenchActionDockClassName}>
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-        <div className="min-w-0 flex-1">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500 dark:text-slate-400">
-            {isZh ? "ZIP 接入" : "ZIP intake"}
-          </div>
-          <p className="mt-1.5 max-w-2xl text-[13px] leading-5 text-slate-600 dark:text-slate-300">
-            {isZh
-              ? "选定目标应用后，从本地 ZIP 直接导入并完成默认启用。"
-              : "Choose the target app, then import from a local ZIP and enable it by default."}
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={onInstall}
-          disabled={pendingZipInstall || !zipPath.trim() || !currentApp}
-          className={primaryButtonClassName}
-        >
-          {pendingZipInstall
-            ? (isZh ? "安装中…" : "Installing…")
-            : currentApp
-              ? isZh
-                ? `安装到 ${appLabels[currentApp]}`
-                : `Install to ${appLabels[currentApp]}`
-              : isZh
-                ? "暂无可用宿主"
-                : "No supported host"}
-        </button>
-      </div>
-
-      <div className="mt-3 space-y-3">
-        <div>
-          <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-            {isZh ? "目标应用" : "Target app"}
+    <div className={compactActionDockClassName}>
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+            {isZh ? "ZIP 到" : "ZIP to"}
           </div>
           {supportedAppIds.length > 0 ? (
             <div className="flex flex-wrap gap-1.5">
@@ -995,7 +929,7 @@ function ZipInstallPanel({
                   key={app}
                   type="button"
                   onClick={() => onSelectApp(app)}
-                  className={[workbenchToggleBaseClassName, currentApp === app ? activeToggleClassName : ""].join(" ")}
+                  className={[compactSecondaryButtonClassName, currentApp === app ? activeToggleClassName : ""].join(" ")}
                 >
                   {appLabels[app]}
                 </button>
@@ -1006,23 +940,26 @@ function ZipInstallPanel({
               {isZh ? "当前没有可用宿主，暂时无法从 ZIP 安装。" : "No supported hosts are available right now, so ZIP installation is temporarily unavailable."}
             </InlineAlert>
           )}
+          <button
+            type="button"
+            onClick={onInstall}
+            disabled={pendingZipInstall || !zipPath.trim() || !currentApp}
+            className={compactPrimaryButtonClassName}
+          >
+            {pendingZipInstall ? (isZh ? "安装中…" : "Installing…") : isZh ? "安装" : "Install"}
+          </button>
         </div>
 
-        <div>
-          <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-            {isZh ? "ZIP 文件" : "ZIP file"}
-          </div>
-          <div className="flex flex-col gap-2 xl:flex-row">
-            <input
-              value={zipPath}
-              onChange={(event) => onChangeZipPath(event.target.value)}
-              placeholder={isZh ? "/绝对路径/skills.zip" : "/absolute/path/to/skills.zip"}
-              className={`min-w-0 flex-1 ${inputClassName}`}
-            />
-            <button type="button" onClick={onChooseZip} disabled={pendingZipInstall} className={secondaryButtonClassName}>
-              {isZh ? "选择 ZIP" : "Browse ZIP"}
-            </button>
-          </div>
+        <div className="flex flex-col gap-2 xl:flex-row">
+          <input
+            value={zipPath}
+            onChange={(event) => onChangeZipPath(event.target.value)}
+            placeholder={isZh ? "/绝对路径/skills.zip" : "/absolute/path/to/skills.zip"}
+            className={`h-8 min-w-0 flex-1 text-[12px] ${inputClassName}`}
+          />
+          <button type="button" onClick={onChooseZip} disabled={pendingZipInstall} className={compactSecondaryButtonClassName}>
+            {isZh ? "选择 ZIP" : "Browse ZIP"}
+          </button>
         </div>
       </div>
     </div>

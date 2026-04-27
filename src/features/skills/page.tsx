@@ -25,7 +25,6 @@ import {
   Panel,
   QueryHint,
   SectionSkeleton,
-  StatCard,
   WorkbenchHeroActions,
   WorkbenchOverview,
   dangerButtonClassName,
@@ -42,7 +41,7 @@ import {
   workbenchToggleBaseClassName,
 } from "../../shared/components/workbench-ui";
 import { getAppLabels, getLocaleForLanguage, useI18n } from "../../shared/lib/i18n";
-import { useSupportedAppIds } from "../../shared/lib/tauri";
+import { useInstalledAppIds } from "../../shared/lib/tauri";
 import { countEnabledApps, formatUnixTime, getErrorMessage, stripMarkdownFrontmatter } from "../../shared/lib/format";
 
 const EMPTY_INSTALLED_SKILLS: InstalledSkill[] = [];
@@ -86,12 +85,12 @@ export function SkillsPage() {
   const [selectedItemKey, setSelectedItemKey] = useState<string | null>(null);
 
   const installedQuery = useInstalledSkills();
-  const supportedAppsQuery = useSupportedAppIds();
+  const installedAppsQuery = useInstalledAppIds();
   const toggleSkillAppMutation = useToggleSkillApp();
   const uninstallSkillMutation = useUninstallSkill();
 
   const installedSkills = installedQuery.data ?? EMPTY_INSTALLED_SKILLS;
-  const supportedAppIds = supportedAppsQuery.data ?? EMPTY_SUPPORTED_APP_IDS;
+  const supportedAppIds = installedAppsQuery.data ?? EMPTY_SUPPORTED_APP_IDS;
   const normalizedInputQuery = searchQuery.trim().toLowerCase();
   const normalizedSearchQuery = deferredSearchQuery.trim().toLowerCase();
   const isSearchPending = normalizedInputQuery !== normalizedSearchQuery;
@@ -241,36 +240,15 @@ export function SkillsPage() {
         eyebrow={t("技能", "Skills")}
         title={t("技能工作台", "Skills workbench")}
         description={t(
-          "统一 Sources 与 Skills 的浏览节奏：左侧选中条目，右侧让 README 成为主角，底部再给出启用与卸载动作。",
-          "Keep the same rhythm as Sources: select on the left, make README the main actor on the right, then place toggle and uninstall actions in a bottom dock."
+          "左侧选条目，右侧看 README，底部再执行启用和卸载。",
+          "Select on the left, read the README on the right, then act from the bottom dock."
         )}
-        stats={
-          <>
-            <StatCard
-              label={t("已安装", "Installed")}
-              value={installedQuery.isSuccess ? String(installedSkills.length) : "—"}
-              helper={t("当前受管技能数", "Managed skills right now")}
-              tone="blue"
-            />
-            <StatCard
-              label={t("筛选结果", "Filtered")}
-              value={installedQuery.isSuccess ? String(filteredInstalledSkills.length) : "—"}
-              helper={t("随搜索即时变化", "Changes with search")}
-              tone="slate"
-            />
-            <StatCard
-              label={t("当前详情", "Detail")}
-              value={selectedEntry ? selectedEntry.name : "—"}
-              helper={selectedEntry ? selectedEntry.meta : t("等待选择条目", "Waiting for selection")}
-              tone="violet"
-            />
-          </>
-        }
         actions={
           <WorkbenchHeroActions>
             <Badge tone="slate">
-              {t("已安装", "Installed")} {installedQuery.isSuccess ? filteredInstalledSkills.length : "—"}
+              {t("已安装", "Installed")} {installedQuery.isSuccess ? installedSkills.length : "—"}
             </Badge>
+            {selectedEntry ? <Badge tone="slate">{selectedEntry.name}</Badge> : null}
             {installedQuery.isFetching && installedQuery.isSuccess ? (
               <QueryHint tone="blue">{t("正在刷新列表", "Refreshing installed skills")}</QueryHint>
             ) : null}
@@ -286,7 +264,6 @@ export function SkillsPage() {
           t={t}
           isFetching={installedQuery.isFetching}
           isLoading={installedQuery.isLoading}
-          isSuccess={installedQuery.isSuccess}
           filteredCount={filteredInstalledSkills.length}
           searchQuery={searchQuery}
           isSearchPending={isSearchPending}
@@ -399,7 +376,6 @@ function InstalledSkillsPanel({
   t,
   isFetching,
   isLoading,
-  isSuccess,
   filteredCount,
   searchQuery,
   isSearchPending,
@@ -412,7 +388,6 @@ function InstalledSkillsPanel({
   t: TranslateFn;
   isFetching: boolean;
   isLoading: boolean;
-  isSuccess: boolean;
   filteredCount: number;
   searchQuery: string;
   isSearchPending: boolean;
@@ -428,7 +403,7 @@ function InstalledSkillsPanel({
       title={t("已安装目录", "Installed catalog")}
       action={
         <div className="flex flex-wrap items-center justify-end gap-1.5">
-          <Badge tone="slate">{isSuccess ? filteredCount : "—"}</Badge>
+          <Badge tone="slate">{filteredCount}</Badge>
           {isFetching && !isLoading ? <QueryHint tone="slate">{t("刷新中", "Refreshing")}</QueryHint> : null}
         </div>
       }
@@ -437,20 +412,14 @@ function InstalledSkillsPanel({
     >
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
         <div className={toolbarShellClassName}>
-          <div className="flex flex-col gap-2">
-            <div className="relative min-w-0 flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
-              <input
-                value={searchQuery}
-                onChange={(event) => onSearchChange(event.target.value)}
-                placeholder={t("搜索已安装技能、路径或应用", "Search installed skills, paths, or apps")}
-                className={`h-8 min-w-0 text-[12px] pl-9 ${inputClassName}`}
-              />
-            </div>
-
-            <div className="flex flex-wrap gap-1.5">
-              <Badge tone="slate">{t("已安装", "Installed")} {isSuccess ? filteredCount : "—"}</Badge>
-            </div>
+          <div className="relative min-w-0 flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+            <input
+              value={searchQuery}
+              onChange={(event) => onSearchChange(event.target.value)}
+              placeholder={t("搜索已安装技能、路径或应用", "Search installed skills, paths, or apps")}
+              className={`h-8 min-w-0 text-[12px] pl-9 ${inputClassName}`}
+            />
           </div>
           {isSearchPending ? <QueryHint tone="slate">{t("正在筛选…", "Filtering…")}</QueryHint> : null}
         </div>
@@ -512,40 +481,16 @@ function SelectedSkillWorkspacePanel({
         />
       ) : (
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
-          <div className={workbenchGlassCardClassName}>
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <Badge tone="blue">{t("已安装", "Installed")}</Badge>
-                <Badge tone="slate">{selectedEntry.sourceLabel}</Badge>
-                {selectedDetail?.repoBranch ? <Badge tone="slate">{selectedDetail.repoBranch}</Badge> : null}
-              </div>
-              <div className="mt-2 text-[15px] font-semibold tracking-[-0.04em] text-slate-900 dark:text-white">
-                {selectedEntry.name}
-              </div>
-              <div className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{selectedEntry.summary}</div>
-              {selectedEntry.description ? (
-                <p className="mt-2.5 max-w-3xl text-[13px] leading-5 text-slate-600 dark:text-slate-300">
-                  {selectedEntry.description}
-                </p>
-              ) : null}
+          <div className={`${workbenchGlassCardClassName} px-3.5 py-3`}>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Badge tone="slate">{selectedEntry.sourceLabel}</Badge>
+              {selectedDetail?.repoBranch ? <Badge tone="slate">{selectedDetail.repoBranch}</Badge> : null}
+              <Badge tone="blue">{selectedEntry.meta}</Badge>
             </div>
           </div>
 
           <div className="min-h-0 flex-1">
             <div className={workbenchDetailPanelClassName}>
-              <div className="flex items-center justify-end gap-3 border-b border-slate-200/80 px-4 py-3 dark:border-slate-700/80">
-                {selectedDetail?.readmeUrl ? (
-                  <a
-                    href={selectedDetail.readmeUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={secondaryButtonClassName}
-                  >
-                    <span>{t("外部文档", "External docs")}</span>
-                    <Link2 className="h-3.5 w-3.5" />
-                  </a>
-                ) : null}
-              </div>
               <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-4 py-4">
                 <SkillDetailContent detail={selectedDetail} locale={locale} appLabels={appLabels} isZh={isZh} />
               </div>
@@ -668,28 +613,34 @@ function InstalledSkillActions({
     <div className={workbenchActionDockClassName}>
       <div className="space-y-2">
         <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-          {isZh ? "管理流程" : "Management workflow"}
+          {isZh ? "管理动作" : "Actions"}
         </div>
 
         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-          <div className="flex flex-wrap gap-1.5">
-            {supportedAppIds.map((app) => {
-              const enabled = skill.apps[app];
-              const isPending = pendingToggleKey === `${skill.id}:${app}`;
+          {supportedAppIds.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              {supportedAppIds.map((app) => {
+                const enabled = skill.apps[app];
+                const isPending = pendingToggleKey === `${skill.id}:${app}`;
 
-              return (
-                <button
-                  key={app}
-                  type="button"
-                  onClick={() => onToggle(skill, app, !enabled)}
-                  disabled={isPending}
-                  className={[workbenchToggleBaseClassName, enabled ? activeToggleClassName : ""].join(" ")}
-                >
-                  {isPending ? `${appLabels[app]}…` : appLabels[app]}
-                </button>
-              );
-            })}
-          </div>
+                return (
+                  <button
+                    key={app}
+                    type="button"
+                    onClick={() => onToggle(skill, app, !enabled)}
+                    disabled={isPending}
+                    className={[workbenchToggleBaseClassName, enabled ? activeToggleClassName : ""].join(" ")}
+                  >
+                    {isPending ? `${appLabels[app]}…` : appLabels[app]}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <InlineAlert tone="slate" className="flex-1">
+              {isZh ? "未检测到可用宿主，当前无法调整启用范围。" : "No available hosts were detected, so activation targets are unavailable."}
+            </InlineAlert>
+          )}
           <div className="flex flex-wrap gap-1.5">
             {readmeUrl ? (
               <a href={readmeUrl} target="_blank" rel="noreferrer" className={secondaryButtonClassName}>

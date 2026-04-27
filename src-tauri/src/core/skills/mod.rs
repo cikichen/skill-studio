@@ -87,6 +87,41 @@ pub struct UnmanagedSkill {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct SkillDetail {
+    pub kind: String,
+    pub name: String,
+    pub directory: String,
+    pub description: Option<String>,
+    pub readme_url: Option<String>,
+    pub readme_content: Option<String>,
+    pub repo_owner: Option<String>,
+    pub repo_name: Option<String>,
+    pub repo_branch: Option<String>,
+    pub path: Option<String>,
+    pub found_in: Option<Vec<String>>,
+    pub installed_at: Option<i64>,
+    pub apps: Option<SkillApps>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SkillDetailQuery {
+    pub kind: String,
+    pub name: String,
+    pub directory: String,
+    pub description: Option<String>,
+    pub readme_url: Option<String>,
+    pub repo_owner: Option<String>,
+    pub repo_name: Option<String>,
+    pub repo_branch: Option<String>,
+    pub path: Option<String>,
+    pub found_in: Option<Vec<String>>,
+    pub installed_at: Option<i64>,
+    pub apps: Option<SkillApps>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ImportSkillSelection {
     pub directory: String,
     pub apps: SkillApps,
@@ -142,6 +177,82 @@ pub fn get_installed_skills() -> Result<Vec<InstalledSkill>, String> {
 pub fn get_skill_backups() -> Result<Vec<SkillBackupEntry>, String> {
     list_backup_entries()
 }
+
+pub fn get_skill_detail(query: SkillDetailQuery) -> Result<SkillDetail, String> {
+    let kind = query.kind.trim().to_ascii_lowercase();
+    if kind.is_empty() {
+        return Err(String::from("Skill detail kind is required"));
+    }
+
+    let readme_content = match kind.as_str() {
+        "installed" => {
+            let directory = sanitize_install_name(&query.directory)
+                .ok_or_else(|| format!("Invalid installed skill directory: {}", query.directory))?;
+            let skill_md = skills_ssot_dir()?.join(&directory).join("SKILL.md");
+            Some(read_optional_skill_markdown(&skill_md)?)
+        }
+        "unmanaged" => {
+            let path = query
+                .path
+                .as_deref()
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .ok_or_else(|| format!("Skill path is required for unmanaged detail: {}", query.directory))?;
+            let skill_md = Path::new(path).join("SKILL.md");
+            Some(read_optional_skill_markdown(&skill_md)?)
+        }
+        "discoverable" => {
+            let repo_owner = query
+                .repo_owner
+                .as_deref()
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .ok_or_else(|| format!("Skill repo owner is required for discoverable detail: {}", query.directory))?;
+            let repo_name = query
+                .repo_name
+                .as_deref()
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .ok_or_else(|| format!("Skill repo name is required for discoverable detail: {}", query.directory))?;
+            let repo_branch = query
+                .repo_branch
+                .as_deref()
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .unwrap_or("main");
+            let source_relative = sanitize_skill_source_path(&query.directory)?;
+            let repo = SkillRepo {
+                owner: repo_owner.to_string(),
+                name: repo_name.to_string(),
+                branch: repo_branch.to_string(),
+                enabled: true,
+            };
+            let (temp_dir, _) = download_repo(&repo)?;
+            let skill_md = temp_dir.join(source_relative).join("SKILL.md");
+            let read_result = read_optional_skill_markdown(&skill_md);
+            let _ = fs::remove_dir_all(&temp_dir);
+            Some(read_result?)
+        }
+        other => return Err(format!("Unsupported skill detail kind: {other}")),
+    };
+
+    Ok(SkillDetail {
+        kind,
+        name: query.name,
+        directory: query.directory,
+        description: query.description,
+        readme_url: query.readme_url,
+        readme_content,
+        repo_owner: query.repo_owner,
+        repo_name: query.repo_name,
+        repo_branch: query.repo_branch,
+        path: query.path,
+        found_in: query.found_in,
+        installed_at: query.installed_at,
+        apps: query.apps,
+    })
+}
+
 
 pub fn get_skill_repos() -> Result<Vec<SkillRepo>, String> {
     Ok(load_store()?.repos)
@@ -812,6 +923,11 @@ fn build_skill_from_metadata(
         repo_name: repo.name.clone(),
         repo_branch: repo.branch.clone(),
     })
+}
+
+fn read_optional_skill_markdown(skill_md: &Path) -> Result<String, String> {
+    fs::read_to_string(skill_md)
+        .map_err(|error| format!("Failed to read skill markdown {}: {error}", skill_md.display()))
 }
 
 fn read_skill_name_desc(skill_md: &Path, fallback_name: &str) -> (String, Option<String>) {

@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
 import { Archive } from "lucide-react";
+import { useEffect, useState } from "react";
 import {
   useDeleteSkillBackup,
   useRestoreSkillBackup,
@@ -12,7 +12,7 @@ import {
   getLocaleForLanguage,
   useI18n,
 } from "../../shared/lib/i18n";
-import { useSupportedAppIds } from "../../shared/lib/tauri";
+import { useInstalledAppIds } from "../../shared/lib/tauri";
 import {
   ConfirmActionDialog,
   EmptyPanel,
@@ -43,13 +43,13 @@ export function BackupsPage() {
   } | null>(null);
 
   const backupsQuery = useSkillBackups();
-  const supportedAppsQuery = useSupportedAppIds();
+  const installedAppsQuery = useInstalledAppIds();
   const deleteBackupMutation = useDeleteSkillBackup();
   const restoreBackupMutation = useRestoreSkillBackup();
 
   const backups = backupsQuery.data ?? [];
   const backupsReady = backupsQuery.data !== undefined;
-  const supportedAppIds = supportedAppsQuery.data ?? EMPTY_SUPPORTED_APP_IDS;
+  const supportedAppIds = installedAppsQuery.data ?? EMPTY_SUPPORTED_APP_IDS;
 
   useEffect(() => {
     if (!supportedAppIds.length) {
@@ -66,7 +66,7 @@ export function BackupsPage() {
   const errorMessage =
     actionError ??
     getErrorMessage(backupsQuery.error) ??
-    getErrorMessage(supportedAppsQuery.error);
+    getErrorMessage(installedAppsQuery.error);
 
   async function handleRestore(backupId: string) {
     if (!effectiveCurrentApp) {
@@ -105,24 +105,14 @@ export function BackupsPage() {
         title={isZh ? "备份工作台" : "Backups workbench"}
         description={
           isZh
-            ? "选择恢复目标并管理本地备份记录。"
-            : "Choose a restore target and manage local backup records."
+            ? "保留一个恢复目标入口，再集中管理本地恢复点。"
+            : "Keep a single restore target entry point, then manage local restore points in one place."
         }
         className="space-y-1.5"
         actions={
-          <>
-            <div className="rounded-[18px] border border-slate-200/85 bg-slate-50 px-3.5 py-2.5 dark:border-slate-700 dark:bg-slate-900/70">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-                {isZh ? "当前目标" : "Current target"}
-              </div>
-              <div className="mt-1 text-[14px] font-semibold text-slate-900 dark:text-white">
-                {effectiveCurrentApp ? appLabels[effectiveCurrentApp] : isZh ? "当前不可用" : "Unavailable"}
-              </div>
-            </div>
-            {(backupsQuery.isFetching && backupsReady) || (supportedAppsQuery.isFetching && supportedAppsQuery.data) ? (
-              <QueryHint tone="amber">{isZh ? "正在刷新备份列表" : "Refreshing backups"}</QueryHint>
-            ) : null}
-          </>
+          (backupsQuery.isFetching && backupsReady) || (installedAppsQuery.isFetching && installedAppsQuery.data) ? (
+            <QueryHint tone="amber">{isZh ? "正在刷新备份列表" : "Refreshing backups"}</QueryHint>
+          ) : undefined
         }
       />
 
@@ -158,7 +148,7 @@ export function BackupsPage() {
               </div>
             ) : (
               <InlineAlert tone="slate">
-                {isZh ? "当前没有可用宿主，暂时无法执行恢复操作。" : "No supported hosts are available right now, so restore actions are temporarily unavailable."}
+                {isZh ? "未检测到可用宿主，暂时无法执行恢复操作。" : "No available hosts were detected, so restore actions are temporarily unavailable."}
               </InlineAlert>
             )}
           </div>
@@ -248,7 +238,7 @@ export function BackupsPage() {
                               ? `正在恢复到 ${appLabels[effectiveCurrentApp]}`
                               : `Restoring into ${appLabels[effectiveCurrentApp]}`
                             : isZh
-                              ? "当前没有可用恢复目标"
+                              ? "未检测到可用恢复目标"
                               : "No restore target is currently available"
                           : isZh
                             ? "正在删除该备份"

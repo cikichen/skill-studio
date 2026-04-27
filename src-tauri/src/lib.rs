@@ -6,8 +6,8 @@ use commands::{
   manifest::{read_skill_manifest_file, validate_skill_manifest},
   skills::{
     add_skill_repo, delete_skill_backup, discover_available_skills, get_installed_skills,
-    get_skill_backups, get_skill_repos, import_skills_from_apps, install_skill_unified,
-    install_skills_from_zip, remove_skill_repo, restore_skill_backup,
+    get_skill_backups, get_skill_detail, get_skill_repos, import_skills_from_apps,
+    install_skill_unified, install_skills_from_zip, remove_skill_repo, restore_skill_backup,
     scan_unmanaged_skills, toggle_skill_app, uninstall_skill_unified,
   },
   system::{get_app_overview, ping},
@@ -36,6 +36,7 @@ pub fn run() {
       read_skill_manifest_file,
       get_installed_skills,
       get_skill_backups,
+      get_skill_detail,
       get_skill_repos,
       discover_available_skills,
       add_skill_repo,

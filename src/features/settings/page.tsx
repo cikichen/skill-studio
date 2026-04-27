@@ -1,9 +1,7 @@
-import { FolderCog } from "lucide-react";
 import { useAppOverview } from "../../shared/lib/tauri";
 import { getAppLabels, useI18n } from "../../shared/lib/i18n";
-import { getSupportedAppIds } from "../../shared/types/skills";
+import { getDetectedInstalledAppIds, getSupportedAppIds, isKnownAppId } from "../../shared/types/skills";
 import {
-  Badge,
   EmptyPanel,
   InlineAlert,
   KeyValueList,
@@ -21,6 +19,8 @@ export function SettingsPage() {
 
   const overview = overviewQuery.data;
   const supportedAppIds = getSupportedAppIds(overview?.supportedApps);
+  const detectedApps = overview?.detectedApps ?? [];
+  const installedAppIds = getDetectedInstalledAppIds(detectedApps);
   const errorMessage = getErrorMessage(overviewQuery.error);
 
   const settings = overview
@@ -45,13 +45,24 @@ export function SettingsPage() {
         },
         {
           key: "supportedApps",
-          label: isZh ? "支持的宿主" : "Supported hosts",
+          label: isZh ? "支持的宿主类型" : "Supported host types",
           value:
             supportedAppIds.length > 0
               ? supportedAppIds.map((app) => appLabels[app]).join(isZh ? "、" : ", ")
               : isZh
                 ? "当前不可用"
                 : "Unavailable",
+          mono: false,
+        },
+        {
+          key: "installedApps",
+          label: isZh ? "已检测到的宿主" : "Detected hosts",
+          value:
+            installedAppIds.length > 0
+              ? installedAppIds.map((app) => appLabels[app]).join(isZh ? "、" : ", ")
+              : isZh
+                ? "未检测到可用宿主"
+                : "No available hosts detected",
           mono: false,
         },
       ]
@@ -64,19 +75,12 @@ export function SettingsPage() {
         title={isZh ? "环境信息台" : "Environment desk"}
         description={
           isZh
-            ? "查看当前工作区默认值、宿主支持与运行环境信息。"
-            : "Inspect workspace defaults, supported hosts, and runtime environment information."
+            ? "保持只读环境页定位，只展示当前工作区默认值与宿主检测结果。"
+            : "Keep this as a read-only environment page with current workspace defaults and detected host results."
         }
         className="space-y-1.5"
         actions={
-          overview ? (
-            <>
-              <Badge tone="slate">{isZh ? "宿主" : "Hosts"} {supportedAppIds.length}</Badge>
-              {overviewQuery.isFetching ? (
-                <QueryHint tone="blue">{isZh ? "正在刷新环境信息" : "Refreshing environment info"}</QueryHint>
-              ) : null}
-            </>
-          ) : overviewQuery.isFetching ? (
+          overviewQuery.isFetching ? (
             <QueryHint tone="blue">{isZh ? "正在刷新环境信息" : "Refreshing environment info"}</QueryHint>
           ) : undefined
         }
@@ -84,7 +88,7 @@ export function SettingsPage() {
 
       {errorMessage ? <InlineAlert tone="rose">{errorMessage}</InlineAlert> : null}
 
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,1.3fr)_minmax(280px,0.7fr)]">
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1.42fr)_minmax(280px,0.58fr)]">
         <Panel
           eyebrow={isZh ? "默认值" : "Defaults"}
           title={isZh ? "环境默认值" : "Environment defaults"}
@@ -110,44 +114,58 @@ export function SettingsPage() {
           )}
         </Panel>
 
-        <div className="space-y-3">
-          <Panel
-            eyebrow={isZh ? "宿主" : "Hosts"}
-            title={isZh ? "当前支持的宿主" : "Currently supported hosts"}
-            density="compact"
-          >
-            {!overview && overviewQuery.isLoading ? (
-              <SectionSkeleton rows={2} compact />
-            ) : supportedAppIds.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {supportedAppIds.map((app) => (
-                  <Badge key={app} tone="blue">
-                    {appLabels[app]}
-                  </Badge>
-                ))}
-              </div>
-            ) : (
-              <Badge tone="slate">{isZh ? "暂无数据" : "No data"}</Badge>
-            )}
-          </Panel>
+        <Panel
+          eyebrow={isZh ? "宿主" : "Hosts"}
+          title={isZh ? "检测结果" : "Detection results"}
+          description={
+            isZh
+              ? "底部动作区只会使用这里检测到的宿主；未检测到的宿主不会出现在安装、导入和恢复目标里。"
+              : "Bottom action docks only use the hosts detected here; undetected hosts are excluded from install, import, and restore targets."
+          }
+          density="compact"
+        >
+          {!overview && overviewQuery.isLoading ? (
+            <SectionSkeleton rows={2} compact />
+          ) : detectedApps.length > 0 ? (
+            <div className="space-y-2">
+              {detectedApps.map((app) => {
+                const knownApp = isKnownAppId(app.appId) ? app.appId : null;
+                const label = knownApp ? appLabels[knownApp] : app.appId;
 
-          <Panel
-            eyebrow={isZh ? "工作区" : "Workspace"}
-            title={isZh ? "当前根目录" : "Current workspace root"}
-            density="compact"
-          >
-            <div className="rounded-[18px] border border-slate-200/85 bg-slate-50 px-3.5 py-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200">
-              <div className="flex items-start gap-3">
-                <div className="rounded-xl border border-slate-200 bg-white p-2 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                  <FolderCog className="h-4 w-4" />
-                </div>
-                <div className="min-w-0 break-all text-[13px] leading-5">
-                  {overview?.workspaceRoot ?? (isZh ? "当前不可用" : "Unavailable")}
-                </div>
-              </div>
+                return (
+                  <div
+                    key={app.appId}
+                    className="rounded-[16px] border border-slate-200/85 bg-slate-50 px-3 py-2 text-[12px] text-slate-700 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-medium">{label}</span>
+                      <span
+                        className={[
+                          "rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em]",
+                          app.installed
+                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/16 dark:text-emerald-100"
+                            : "bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
+                        ].join(" ")}
+                      >
+                        {app.installed ? (isZh ? "已检测" : "Detected") : (isZh ? "未检测" : "Not found")}
+                      </span>
+                    </div>
+                    {app.location ? (
+                      <div className="mt-1 break-all font-mono text-[11px] text-slate-500 dark:text-slate-400">{app.location}</div>
+                    ) : null}
+                  </div>
+                );
+              })}
             </div>
-          </Panel>
-        </div>
+          ) : (
+            <EmptyPanel
+              title={isZh ? "暂无宿主检测结果" : "No host detection results"}
+              description={
+                isZh ? "当前运行环境没有返回宿主检测信息。" : "The current runtime did not return host detection information."
+              }
+            />
+          )}
+        </Panel>
       </div>
     </PageLayout>
   );

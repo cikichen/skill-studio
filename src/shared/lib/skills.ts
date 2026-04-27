@@ -5,6 +5,8 @@ import type {
   ImportSkillSelection,
   InstalledSkill,
   SkillBackupEntry,
+  SkillDetail,
+  SkillDetailQuery,
   SkillRepo,
   SkillUninstallResult,
   UnmanagedSkill,
@@ -25,6 +27,9 @@ export const skillsApi = {
   },
   scanUnmanagedSkills() {
     return invoke<UnmanagedSkill[]>("scan_unmanaged_skills");
+  },
+  getSkillDetail(query: SkillDetailQuery) {
+    return invoke<SkillDetail>("get_skill_detail", { query });
   },
   addSkillRepo(repo: SkillRepo) {
     return invoke<boolean>("add_skill_repo", { repo });
@@ -63,3 +68,4 @@ export const skillsApi = {
     return invoke<boolean>("toggle_skill_app", { id, app, enabled });
   },
 };
+

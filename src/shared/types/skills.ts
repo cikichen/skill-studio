@@ -24,6 +24,24 @@ export function getSupportedAppIds(supportedApps?: readonly string[] | null): Ap
   return Array.from(uniqueAppIds);
 }
 
+export function getDetectedInstalledAppIds(
+  detectedApps?: readonly { appId: string; installed: boolean }[] | null
+): AppId[] {
+  if (!detectedApps?.length) {
+    return [];
+  }
+
+  const uniqueAppIds = new Set<AppId>();
+
+  detectedApps.forEach((app) => {
+    if (app.installed && isKnownAppId(app.appId)) {
+      uniqueAppIds.add(app.appId);
+    }
+  });
+
+  return Array.from(uniqueAppIds);
+}
+
 export type SkillApps = {
   claude: boolean;
   codex: boolean;

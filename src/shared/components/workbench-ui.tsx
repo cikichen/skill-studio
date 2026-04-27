@@ -151,25 +151,13 @@ export function WorkbenchOverview({
 }) {
   return (
     <section className={clsx(workbenchGlassCardClassName, "overflow-hidden px-3.5 py-3.5 md:px-4 md:py-4", className)}>
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-        <div className="min-w-0 flex-1">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.28em] text-blue-600 dark:text-blue-300">
-            {eyebrow}
-          </div>
-          <h1 className="mt-1 text-[1.15rem] font-semibold tracking-[-0.04em] text-slate-900 dark:text-white md:text-[1.35rem]">
-            {title}
-          </h1>
-          {description ? (
-            <p className="mt-1.5 max-w-3xl text-[12px] leading-5 text-slate-600 dark:text-slate-400">
-              {description}
-            </p>
-          ) : null}
-        </div>
-
-        {stats ? <div className="grid gap-2 sm:grid-cols-3 xl:min-w-[390px] xl:max-w-[470px]">{stats}</div> : null}
-      </div>
-
-      {actions ? <div className="mt-3">{actions}</div> : null}
+      <PageIntro
+        eyebrow={eyebrow}
+        title={title}
+        description={description}
+        aside={stats ? <div className="grid gap-2 sm:grid-cols-3 xl:min-w-[390px] xl:max-w-[470px]">{stats}</div> : undefined}
+        actions={actions}
+      />
     </section>
   );
 }

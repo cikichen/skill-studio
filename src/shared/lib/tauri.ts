@@ -1,7 +1,7 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
-import type { AppOverview, ManifestValidationResult } from "../types/app";
-import { getSupportedAppIds } from "../types/skills";
+import type { AppOverview, DetectedApp, ManifestValidationResult } from "../types/app";
+import { getDetectedInstalledAppIds, getSupportedAppIds } from "../types/skills";
 
 export async function pingBackend() {
   return invoke<string>("ping");
@@ -26,6 +26,24 @@ export function useSupportedAppIds() {
   return {
     ...overviewQuery,
     data: getSupportedAppIds(overviewQuery.data?.supportedApps),
+  };
+}
+
+export function useDetectedApps() {
+  const overviewQuery = useAppOverview();
+
+  return {
+    ...overviewQuery,
+    data: overviewQuery.data?.detectedApps ?? ([] as DetectedApp[]),
+  };
+}
+
+export function useInstalledAppIds() {
+  const overviewQuery = useAppOverview();
+
+  return {
+    ...overviewQuery,
+    data: getDetectedInstalledAppIds(overviewQuery.data?.detectedApps),
   };
 }
 

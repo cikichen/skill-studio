@@ -1,8 +1,15 @@
+export type DetectedApp = {
+  appId: string;
+  installed: boolean;
+  location?: string | null;
+};
+
 export type AppOverview = {
   appName: string;
   version: string;
   workspaceRoot: string;
   supportedApps: string[];
+  detectedApps: DetectedApp[];
   syncModes: string[];
 };
 

@@ -1,13 +1,13 @@
 use crate::core::skills::{
     add_skill_repo as add_repo, delete_skill_backup as delete_backup,
     discover_available_skills as discover_skills, get_installed_skills as get_installed,
-    get_skill_backups as get_backups, get_skill_repos as get_repos,
+    get_skill_backups as get_backups, get_skill_detail as get_detail, get_skill_repos as get_repos,
     import_skills_from_apps as import_from_apps, install_skill_unified as install_unified,
     install_skills_from_zip as install_from_zip, remove_skill_repo as remove_repo,
     restore_skill_backup as restore_backup, scan_unmanaged_skills as scan_unmanaged,
     toggle_skill_app as toggle_app, uninstall_skill_unified as uninstall_unified,
-    DiscoverableSkill, ImportSkillSelection, InstalledSkill, SkillBackupEntry, SkillRepo,
-    SkillUninstallResult, UnmanagedSkill,
+    DiscoverableSkill, ImportSkillSelection, InstalledSkill, SkillBackupEntry, SkillDetail,
+    SkillDetailQuery, SkillRepo, SkillUninstallResult, UnmanagedSkill,
 };
 
 #[tauri::command]
@@ -21,13 +21,20 @@ pub fn get_skill_backups() -> Result<Vec<SkillBackupEntry>, String> {
 }
 
 #[tauri::command]
+pub fn get_skill_detail(query: SkillDetailQuery) -> Result<SkillDetail, String> {
+    get_detail(query)
+}
+
+#[tauri::command]
 pub fn get_skill_repos() -> Result<Vec<SkillRepo>, String> {
     get_repos()
 }
 
 #[tauri::command]
-pub fn discover_available_skills() -> Result<Vec<DiscoverableSkill>, String> {
-    discover_skills()
+pub async fn discover_available_skills() -> Result<Vec<DiscoverableSkill>, String> {
+    tauri::async_runtime::spawn_blocking(discover_skills)
+        .await
+        .map_err(|error| format!("Failed to join discovery task: {error}"))?
 }
 
 #[tauri::command]
@@ -72,8 +79,10 @@ pub fn toggle_skill_app(id: String, app: String, enabled: bool) -> Result<bool, 
 }
 
 #[tauri::command]
-pub fn scan_unmanaged_skills() -> Result<Vec<UnmanagedSkill>, String> {
-    scan_unmanaged()
+pub async fn scan_unmanaged_skills() -> Result<Vec<UnmanagedSkill>, String> {
+    tauri::async_runtime::spawn_blocking(scan_unmanaged)
+        .await
+        .map_err(|error| format!("Failed to join unmanaged scan task: {error}"))?
 }
 
 #[tauri::command]

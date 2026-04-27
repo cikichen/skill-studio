@@ -46,8 +46,27 @@
     </style>
     <script>
       (function() {
-        var isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        var bgColor = isDark ? '#020617' : '#f8fafc';
+        var storageKey = 'skill-studio.theme';
+        var theme = 'system';
+        var storedTheme;
+
+        try {
+          storedTheme = window.localStorage.getItem(storageKey);
+          if (storedTheme === 'light' || storedTheme === 'dark' || storedTheme === 'system') {
+            theme = storedTheme;
+          }
+        } catch (error) {
+          theme = 'system';
+        }
+
+        var isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        var resolvedTheme = isDark ? 'dark' : 'light';
+        var bgColor = isDark ? '#1d232a' : '#fafbfc';
+
+        document.documentElement.classList.toggle('dark', isDark);
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.dataset.resolvedTheme = resolvedTheme;
+        document.documentElement.style.colorScheme = resolvedTheme;
         document.documentElement.style.setProperty('--bg-color', bgColor);
         document.documentElement.style.backgroundColor = bgColor;
       })();
